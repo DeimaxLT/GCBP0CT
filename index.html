@@ -30,15 +30,15 @@
 
     .wrap {
       display: flex; flex-direction: column; align-items: center;
-      gap: 32px; padding: 24px; width: min(400px, 92vw);
+      gap: 28px; padding: 24px; width: min(400px, 96vw);
     }
 
     .heading { text-align: center; }
     .heading .lt { font-size: 0.55rem; line-height: 2.2; color: #eee; }
     .heading .en { font-size: 0.35rem; line-height: 2; color: #555; margin-top: 4px; }
 
+    /* cells */
     .cells { display: flex; gap: 8px; }
-
     .cell {
       width: 48px; height: 56px;
       background: #1a1a1a; border: 2px solid #333;
@@ -57,12 +57,8 @@
     .cell.success { border-color: #4caf50; color: #4caf50; }
     .cell.error   { border-color: #e53935; color: #e53935; }
 
-    /* invisible tap target over cells area */
-    .tap-area {
-      position: absolute; inset: 0; cursor: text;
-    }
-
-    .status { min-height: 40px; text-align: center; }
+    /* status */
+    .status { min-height: 36px; text-align: center; }
     .status .lt { font-size: 0.42rem; line-height: 2.4; }
     .status .en { font-size: 0.3rem; line-height: 2; color: #555; margin-top: 2px; }
     .status.err .lt { color: #e53935; }
@@ -75,6 +71,50 @@
       75%    { transform: translateX(8px); }
     }
 
+    /* ── CUSTOM KEYBOARD ── */
+    .keyboard {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .kb-row {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+    }
+
+    .kb-key {
+      flex: 1;
+      max-width: 44px;
+      height: 42px;
+      background: #222;
+      border: 2px solid #333;
+      border-bottom: 4px solid #444;
+      color: #ccc;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.45rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.08s, transform 0.08s, border-bottom-width 0.08s;
+      border-radius: 2px;
+      line-height: 1;
+    }
+
+    .kb-key:active, .kb-key.pressed {
+      background: #333;
+      border-bottom-width: 2px;
+      transform: translateY(2px);
+    }
+
+    .kb-key.wide   { max-width: 68px; flex: 1.6; font-size: 0.35rem; }
+    .kb-key.space  { max-width: 140px; flex: 3.5; }
+    .kb-key.delete { max-width: 58px; flex: 1.4; font-size: 0.35rem; color: #e53935; border-color: #3a1515; border-bottom-color: #4a1c1c; }
+
+    /* page 2 */
     .reveal { text-align: center; }
     .reveal .lt { font-size: 0.9rem; line-height: 2; color: #eee; }
     .reveal .en { font-size: 0.4rem; line-height: 2; color: #555; margin-top: 6px; }
@@ -88,11 +128,49 @@
       <div class="lt">Įvesk tekstą kurį iššifravai</div>
       <div class="en">ENTER THE TEXT YOU DECODED</div>
     </div>
-    <div style="position:relative;">
-      <div class="cells" id="cells"></div>
-      <div class="tap-area" onclick="focusInp()"></div>
-    </div>
+
+    <div class="cells" id="cells"></div>
     <div class="status" id="status"></div>
+
+    <!-- Custom keyboard -->
+    <div class="keyboard" id="keyboard">
+      <div class="kb-row">
+        <div class="kb-key" data-key="Q">Q</div>
+        <div class="kb-key" data-key="W">W</div>
+        <div class="kb-key" data-key="E">E</div>
+        <div class="kb-key" data-key="R">R</div>
+        <div class="kb-key" data-key="T">T</div>
+        <div class="kb-key" data-key="Y">Y</div>
+        <div class="kb-key" data-key="U">U</div>
+        <div class="kb-key" data-key="I">I</div>
+        <div class="kb-key" data-key="O">O</div>
+        <div class="kb-key" data-key="P">P</div>
+      </div>
+      <div class="kb-row">
+        <div class="kb-key" data-key="A">A</div>
+        <div class="kb-key" data-key="S">S</div>
+        <div class="kb-key" data-key="D">D</div>
+        <div class="kb-key" data-key="F">F</div>
+        <div class="kb-key" data-key="G">G</div>
+        <div class="kb-key" data-key="H">H</div>
+        <div class="kb-key" data-key="J">J</div>
+        <div class="kb-key" data-key="K">K</div>
+        <div class="kb-key" data-key="L">L</div>
+      </div>
+      <div class="kb-row">
+        <div class="kb-key" data-key="Z">Z</div>
+        <div class="kb-key" data-key="X">X</div>
+        <div class="kb-key" data-key="C">C</div>
+        <div class="kb-key" data-key="V">V</div>
+        <div class="kb-key" data-key="B">B</div>
+        <div class="kb-key" data-key="N">N</div>
+        <div class="kb-key" data-key="M">M</div>
+        <div class="kb-key delete" data-key="BACKSPACE">⌫</div>
+      </div>
+      <div class="kb-row">
+        <div class="kb-key space" data-key=" ">SPACE</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -105,30 +183,17 @@
   </div>
 </div>
 
-<!-- Single input, hidden off-screen but focusable -->
-<input
-  id="inp"
-  type="text"
-  inputmode="text"
-  autocomplete="off"
-  autocorrect="off"
-  autocapitalize="characters"
-  spellcheck="false"
-  style="position:fixed;left:-9999px;top:50%;width:1px;height:1px;opacity:0;"
-/>
-
 <script>
   const PASSWORD = "TAP ME";
   const LEN = PASSWORD.length;
 
-  const cellsEl = document.getElementById('cells');
-  const inp     = document.getElementById('inp');
-  const wrap    = document.getElementById('wrap');
-  const status  = document.getElementById('status');
-  const page1   = document.getElementById('page-1');
-  const page2   = document.getElementById('page-2');
+  const cellsEl  = document.getElementById('cells');
+  const wrap     = document.getElementById('wrap');
+  const status   = document.getElementById('status');
+  const page1    = document.getElementById('page-1');
+  const page2    = document.getElementById('page-2');
 
-  let value  = '';   // our own source of truth — never trust inp.value directly
+  let value  = '';
   let locked = false;
   const cells = [];
 
@@ -139,13 +204,6 @@
     cells.push(c);
   }
 
-  function focusInp() {
-    if (!locked) {
-      inp.value = value; // sync before focus so cursor is at end
-      inp.focus();
-    }
-  }
-
   function render() {
     cells.forEach((c, i) => {
       c.textContent = value[i] || '';
@@ -154,57 +212,42 @@
     });
   }
 
-  // Use keydown for reliable single-character capture on both desktop & mobile
-  inp.addEventListener('keydown', (e) => {
-    if (locked) return;
-
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      value = value.slice(0, -1);
-      inp.value = value;
-      render();
-      clearStatus();
-      return;
-    }
-
-    if (e.key.length === 1 && value.length < LEN) {
-      e.preventDefault();
-      const ch = e.key.toUpperCase();
-      if (/[A-Z ]/.test(ch)) {
-        value += ch;
-        inp.value = value;
-        render();
-        clearStatus();
-        if (value.length === LEN) validate();
-      }
-    }
-  });
-
-  // Fallback: handle compositionend / input for virtual keyboards that don't fire keydown reliably
-  inp.addEventListener('input', () => {
-    if (locked) return;
-    // Derive new characters by comparing inp.value to our known value
-    const raw = inp.value.toUpperCase().replace(/[^A-Z ]/g, '');
-    if (raw.length > value.length) {
-      // characters were added
-      const added = raw.slice(value.length);
-      for (const ch of added) {
-        if (value.length < LEN) value += ch;
-      }
-    } else if (raw.length < value.length) {
-      value = value.slice(0, raw.length);
-    }
-    inp.value = value;
-    render();
-    clearStatus();
-    if (value.length === LEN) validate();
-  });
-
   function clearStatus() {
     status.className = 'status';
     status.innerHTML = '';
-    wrap.classList.remove('shake');
   }
+
+  function pressKey(key) {
+    if (locked) return;
+    if (key === 'BACKSPACE') {
+      if (value.length > 0) { value = value.slice(0, -1); render(); clearStatus(); }
+      return;
+    }
+    if (value.length < LEN && /^[A-Z ]$/.test(key)) {
+      value += key;
+      render();
+      clearStatus();
+      if (value.length === LEN) validate();
+    }
+  }
+
+  // keyboard clicks — use pointerdown for instant response
+  document.getElementById('keyboard').addEventListener('pointerdown', (e) => {
+    const key = e.target.closest('[data-key]');
+    if (!key) return;
+    e.preventDefault();
+    const k = key.dataset.key;
+    key.classList.add('pressed');
+    setTimeout(() => key.classList.remove('pressed'), 120);
+    pressKey(k);
+  });
+
+  // also support physical keyboard
+  document.addEventListener('keydown', (e) => {
+    if (locked) return;
+    if (e.key === 'Backspace') { e.preventDefault(); pressKey('BACKSPACE'); return; }
+    if (e.key.length === 1) pressKey(e.key.toUpperCase());
+  });
 
   function validate() {
     locked = true;
@@ -221,20 +264,16 @@
       status.innerHTML = '<div class="lt">Neteisingas slaptažodis</div><div class="en">INCORRECT PASSWORD</div>';
       setTimeout(() => {
         value = '';
-        inp.value = '';
         cells.forEach(c => c.className = 'cell');
         wrap.classList.remove('shake');
         render();
         clearStatus();
         locked = false;
-        focusInp();
       }, 1200);
     }
   }
 
   render();
-  focusInp();
-  document.addEventListener('click', focusInp);
 </script>
 </body>
 </html>
