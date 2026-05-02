@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Decrypt</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #111;
+      font-family: 'Press Start 2P', monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .page {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.6s cubic-bezier(0.77,0,0.18,1), opacity 0.6s ease;
+    }
+    #page-1     { transform: translateX(0);    opacity: 1; }
+    #page-1.out { transform: translateX(-110%); opacity: 0; }
+    #page-2     { transform: translateX(110%);  opacity: 0; }
+    #page-2.in  { transform: translateX(0);    opacity: 1; }
+
+    .wrap {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 32px; padding: 24px; width: min(400px, 92vw);
+    }
+
+    .heading { text-align: center; }
+    .heading .lt { font-size: 0.55rem; line-height: 2.2; color: #eee; }
+    .heading .en { font-size: 0.35rem; line-height: 2; color: #555; margin-top: 4px; }
+
+    .cells { display: flex; gap: 8px; }
+
+    .cell {
+      width: 48px; height: 56px;
+      background: #1a1a1a; border: 2px solid #333;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; color: #eee;
+      position: relative; user-select: none;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .cell.active { border-color: #eee; }
+    .cell.active::after {
+      content: '_'; position: absolute; bottom: 6px;
+      font-size: 0.5rem; color: #eee;
+      animation: blink 0.8s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    .cell.success { border-color: #4caf50; color: #4caf50; }
+    .cell.error   { border-color: #e53935; color: #e53935; }
+
+    /* invisible tap target over cells area */
+    .tap-area {
+      position: absolute; inset: 0; cursor: text;
+    }
+
+    .status { min-height: 40px; text-align: center; }
+    .status .lt { font-size: 0.42rem; line-height: 2.4; }
+    .status .en { font-size: 0.3rem; line-height: 2; color: #555; margin-top: 2px; }
+    .status.err .lt { color: #e53935; }
+    .status.err .en { color: #e53935; opacity: 0.7; }
+
+    .wrap.shake { animation: shake 0.4s steps(4); }
+    @keyframes shake {
+      0%,100%{ transform: translateX(0); }
+      25%    { transform: translateX(-8px); }
+      75%    { transform: translateX(8px); }
+    }
+
+    .reveal { text-align: center; }
+    .reveal .lt { font-size: 0.9rem; line-height: 2; color: #eee; }
+    .reveal .en { font-size: 0.4rem; line-height: 2; color: #555; margin-top: 6px; }
+  </style>
+</head>
+<body>
+
+<div class="page" id="page-1">
+  <div class="wrap" id="wrap">
+    <div class="heading">
+      <div class="lt">Įvesk tekstą kurį iššifravai</div>
+      <div class="en">ENTER THE TEXT YOU DECODED</div>
+    </div>
+    <div style="position:relative;">
+      <div class="cells" id="cells"></div>
+      <div class="tap-area" onclick="focusInp()"></div>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<div class="page" id="page-2">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="lt">Metalinės durys</div>
+      <div class="en">METAL DOORS</div>
+    </div>
+  </div>
+</div>
+
+<!-- Single input, hidden off-screen but focusable -->
+<input
+  id="inp"
+  type="text"
+  inputmode="text"
+  autocomplete="off"
+  autocorrect="off"
+  autocapitalize="characters"
+  spellcheck="false"
+  style="position:fixed;left:-9999px;top:50%;width:1px;height:1px;opacity:0;"
+/>
+
+<script>
+  const PASSWORD = "TAP ME";
+  const LEN = PASSWORD.length;
+
+  const cellsEl = document.getElementById('cells');
+  const inp     = document.getElementById('inp');
+  const wrap    = document.getElementById('wrap');
+  const status  = document.getElementById('status');
+  const page1   = document.getElementById('page-1');
+  const page2   = document.getElementById('page-2');
+
+  let value  = '';   // our own source of truth — never trust inp.value directly
+  let locked = false;
+  const cells = [];
+
+  for (let i = 0; i < LEN; i++) {
+    const c = document.createElement('div');
+    c.className = 'cell';
+    cellsEl.appendChild(c);
+    cells.push(c);
+  }
+
+  function focusInp() {
+    if (!locked) {
+      inp.value = value; // sync before focus so cursor is at end
+      inp.focus();
+    }
+  }
+
+  function render() {
+    cells.forEach((c, i) => {
+      c.textContent = value[i] || '';
+      c.className = 'cell';
+      if (i === value.length && value.length < LEN) c.classList.add('active');
+    });
+  }
+
+  // Use keydown for reliable single-character capture on both desktop & mobile
+  inp.addEventListener('keydown', (e) => {
+    if (locked) return;
+
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      value = value.slice(0, -1);
+      inp.value = value;
+      render();
+      clearStatus();
+      return;
+    }
+
+    if (e.key.length === 1 && value.length < LEN) {
+      e.preventDefault();
+      const ch = e.key.toUpperCase();
+      if (/[A-Z ]/.test(ch)) {
+        value += ch;
+        inp.value = value;
+        render();
+        clearStatus();
+        if (value.length === LEN) validate();
+      }
+    }
+  });
+
+  // Fallback: handle compositionend / input for virtual keyboards that don't fire keydown reliably
+  inp.addEventListener('input', () => {
+    if (locked) return;
+    // Derive new characters by comparing inp.value to our known value
+    const raw = inp.value.toUpperCase().replace(/[^A-Z ]/g, '');
+    if (raw.length > value.length) {
+      // characters were added
+      const added = raw.slice(value.length);
+      for (const ch of added) {
+        if (value.length < LEN) value += ch;
+      }
+    } else if (raw.length < value.length) {
+      value = value.slice(0, raw.length);
+    }
+    inp.value = value;
+    render();
+    clearStatus();
+    if (value.length === LEN) validate();
+  });
+
+  function clearStatus() {
+    status.className = 'status';
+    status.innerHTML = '';
+    wrap.classList.remove('shake');
+  }
+
+  function validate() {
+    locked = true;
+    if (value === PASSWORD) {
+      cells.forEach((c, i) => setTimeout(() => c.className = 'cell success', i * 80));
+      setTimeout(() => {
+        page1.classList.add('out');
+        page2.classList.add('in');
+      }, LEN * 80 + 350);
+    } else {
+      cells.forEach(c => c.classList.add('error'));
+      wrap.classList.add('shake');
+      status.className = 'status err';
+      status.innerHTML = '<div class="lt">Neteisingas slaptažodis</div><div class="en">INCORRECT PASSWORD</div>';
+      setTimeout(() => {
+        value = '';
+        inp.value = '';
+        cells.forEach(c => c.className = 'cell');
+        wrap.classList.remove('shake');
+        render();
+        clearStatus();
+        locked = false;
+        focusInp();
+      }, 1200);
+    }
+  }
+
+  render();
+  focusInp();
+  document.addEventListener('click', focusInp);
+</script>
+</body>
+</html>
