@@ -5,231 +5,71 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Geocache Field Puzzle</title>
 <style>
-  :root{
-    --green:#4A752C;
-    --green-dark:#395a21;
-    --brown:#8B5E3C;
-    --bg:#F5F3EE;
-    --text:#1C1C1C;
-    --danger:#A33;
-  }
+  :root{--green:#4A752C;--green-dark:#395a21;--bg:#F5F3EE;--text:#1C1C1C;--danger:#A33;}
   *{box-sizing:border-box;margin:0;padding:0;}
-  html,body{
-    height:100%;
-    font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-    background:var(--green);
-    color:#fff;
-  }
-  #app{
-    min-height:100vh;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    padding:16px;
-  }
-  .screen{
-    width:100%;
-    max-width:480px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:16px;
-    animation:fadeIn .35s ease;
-  }
+  html,body{height:100%;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--green);color:#fff;}
+  #app{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px;}
+  .screen{width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:16px;animation:fadeIn .35s ease;}
   .hidden{display:none !important;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-
-  .lang-title{
-    font-size:1.6rem;
-    font-weight:700;
-    color:#fff;
-    text-align:center;
-    margin-top:40px;
-  }
-  .lang-btn{
-    width:100%;
-    padding:18px;
-    font-size:1.2rem;
-    font-weight:700;
-    border:none;
-    border-radius:12px;
-    background:#fff;
-    color:var(--green-dark);
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:10px;
-    box-shadow:0 2px 6px rgba(0,0,0,.25);
-  }
+  .lang-title{font-size:1.6rem;font-weight:700;color:#fff;text-align:center;margin-top:40px;}
+  .lang-btn{width:100%;padding:18px;font-size:1.2rem;font-weight:700;border:none;border-radius:12px;background:#fff;color:var(--green-dark);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 2px 6px rgba(0,0,0,.25);}
   .lang-btn:active{background:var(--bg);}
   .flag{font-size:1.4rem;}
-
-  .instruction{
-    font-size:1.1rem;
-    line-height:1.4;
-    text-align:center;
-    background:#fff;
-    border:2px solid var(--green-dark);
-    border-radius:12px;
-    padding:12px 14px;
-    width:100%;
-    color:var(--text);
-  }
+  .instruction{font-size:1.1rem;line-height:1.4;text-align:center;background:#fff;border:2px solid var(--green-dark);border-radius:12px;padding:12px 14px;width:100%;color:var(--text);}
   .instruction b{color:var(--green-dark);}
-
-  .timer{
-    font-size:2.6rem;
-    font-weight:800;
-    color:var(--green-dark);
-    background:#fff;
-    border:3px solid #fff;
-    border-radius:14px;
-    padding:6px 28px;
-    letter-spacing:2px;
-  }
+  .timer{font-size:2.6rem;font-weight:800;color:var(--green-dark);background:#fff;border:3px solid #fff;border-radius:14px;padding:6px 28px;letter-spacing:2px;}
   .timer.warning{color:var(--danger);border-color:var(--danger);}
-
-  .camera-wrap{
-    position:relative;
-    width:100%;
-    aspect-ratio:3/4;
-    background:#000;
-    border-radius:16px;
-    overflow:hidden;
-    border:3px solid #fff;
-  }
-  video{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-  }
+  .camera-wrap{position:relative;width:100%;aspect-ratio:3/4;background:#000;border-radius:16px;overflow:hidden;border:3px solid #fff;}
+  video{width:100%;height:100%;object-fit:cover;}
   canvas#snap{display:none;}
-
-  .status-pill{
-    position:absolute;
-    bottom:10px;
-    left:50%;
-    transform:translateX(-50%);
-    background:rgba(0,0,0,.6);
-    color:#fff;
-    padding:6px 14px;
-    border-radius:20px;
-    font-size:.85rem;
-    font-weight:600;
-    white-space:nowrap;
-    transition:background .3s;
-  }
-  .status-pill.scanning{background:rgba(74,117,44,.85);}
+  .status-pill{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;padding:6px 14px;border-radius:20px;font-size:.85rem;font-weight:600;white-space:nowrap;}
+  .status-pill.ready{background:rgba(74,117,44,.85);}
   .status-pill.sending{background:rgba(0,70,160,.75);}
-
-  /* Scan button */
-  .scan-btn{
-    width:100%;
-    padding:15px;
-    font-size:1.15rem;
-    font-weight:700;
-    border:none;
-    border-radius:12px;
-    background:#fff;
-    color:var(--green-dark);
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    box-shadow:0 2px 6px rgba(0,0,0,.25);
-  }
+  .status-pill.error{background:rgba(160,50,50,.85);}
+  .scan-btn{width:100%;padding:15px;font-size:1.15rem;font-weight:700;border:none;border-radius:12px;background:#fff;color:var(--green-dark);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 6px rgba(0,0,0,.25);}
   .scan-btn:disabled{opacity:.5;cursor:not-allowed;}
   .scan-btn:active:not(:disabled){background:var(--bg);}
-
-  .manual-btn{
-    background:none;
-    border:none;
-    color:#fff;
-    text-decoration:underline;
-    font-size:.9rem;
-    cursor:pointer;
-    margin-top:4px;
-  }
-
-  .overlay{
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.55);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:20px;
-    z-index:50;
-  }
-  .overlay-card{
-    background:#fff;
-    border-radius:16px;
-    padding:28px 22px;
-    text-align:center;
-    max-width:420px;
-    width:100%;
-    box-shadow:0 6px 24px rgba(0,0,0,.25);
-  }
-  .overlay-card h2{
-    color:var(--green-dark);
-    font-size:1.6rem;
-    margin-bottom:10px;
-  }
+  .manual-btn{background:none;border:none;color:#fff;text-decoration:underline;font-size:.9rem;cursor:pointer;}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;}
+  .overlay-card{background:#fff;border-radius:16px;padding:28px 22px;text-align:center;max-width:420px;width:100%;box-shadow:0 6px 24px rgba(0,0,0,.25);}
+  .overlay-card h2{color:var(--green-dark);font-size:1.6rem;margin-bottom:10px;}
   .overlay-card.loss h2{color:var(--danger);}
-  .coords{
-    font-size:1.3rem;
-    font-weight:800;
-    background:var(--bg);
-    border:2px dashed var(--green);
-    border-radius:10px;
-    padding:14px;
-    margin:10px 0;
-    word-break:break-word;
-    color:var(--text);
-    letter-spacing:1px;
-  }
-  .stage-dot{
-    width:18px;height:18px;border-radius:50%;
-    background:rgba(255,255,255,0.35);
-    border:2px solid #fff;
-    transition:background .3s;
-  }
+  .coords{font-size:1.3rem;font-weight:800;background:var(--bg);border:2px dashed var(--green);border-radius:10px;padding:14px;margin:10px 0;word-break:break-word;color:var(--text);letter-spacing:1px;}
+  .stage-dot{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,0.35);border:2px solid #fff;transition:background .3s;}
   .stage-dot.done{background:#fff;}
   .stage-dot.active{background:rgba(255,255,255,0.7);}
-  .action-btn{
-    width:100%;
-    padding:14px;
-    font-size:1.1rem;
-    font-weight:700;
-    border:none;
-    border-radius:10px;
-    background:var(--green);
-    color:#fff;
-    cursor:pointer;
-    margin-top:8px;
-  }
+  .action-btn{width:100%;padding:14px;font-size:1.1rem;font-weight:700;border:none;border-radius:10px;background:var(--green);color:#fff;cursor:pointer;margin-top:8px;}
   .action-btn:active{background:var(--green-dark);}
-
-  input.code-input{
-    width:100%;
-    padding:12px;
-    font-size:1.1rem;
-    border:2px solid var(--green);
-    border-radius:10px;
-    text-align:center;
-    margin:10px 0;
-    color:var(--text);
-  }
+  input.code-input{width:100%;padding:12px;font-size:1.1rem;border:2px solid var(--green);border-radius:10px;text-align:center;margin:10px 0;color:var(--text);background:#fff;}
   .error-text{color:var(--danger);font-size:.9rem;min-height:1.2em;}
+  /* API key screen */
+  .key-box{background:rgba(255,255,255,0.15);border-radius:14px;padding:24px;width:100%;display:flex;flex-direction:column;gap:12px;}
+  .key-box p{font-size:.95rem;line-height:1.5;color:#fff;opacity:.9;}
+  .key-box a{color:#cff;font-size:.85rem;}
+  input.key-input{width:100%;padding:13px;font-size:1rem;border:none;border-radius:10px;text-align:center;background:#fff;color:var(--text);font-family:monospace;letter-spacing:.05em;}
+  .key-btn{width:100%;padding:14px;font-size:1.1rem;font-weight:700;border:none;border-radius:10px;background:var(--green-dark);color:#fff;cursor:pointer;}
+  .key-btn:active{opacity:.85;}
+  .key-error{color:#fbb;font-size:.9rem;min-height:1.2em;text-align:center;}
 </style>
 </head>
 <body>
 <div id="app">
 
+  <!-- API KEY SCREEN -->
+  <div id="screen-key" class="screen hidden">
+    <div class="lang-title" style="margin-top:24px;">🔑 API Key Required</div>
+    <div class="key-box">
+      <p>This puzzle uses AI vision to identify objects. Paste your <strong>Anthropic API key</strong> below — it stays in memory only and is never saved.</p>
+      <p>Get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+      <input class="key-input" id="keyInput" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+      <div class="key-error" id="keyError"></div>
+      <button class="key-btn" id="keySubmit">Continue →</button>
+    </div>
+  </div>
+
   <!-- LANGUAGE SELECT -->
-  <div id="screen-lang" class="screen">
+  <div id="screen-lang" class="screen hidden">
     <div class="lang-title">Select your language / Pasirinkite kalbą / Sprache wählen</div>
     <button class="lang-btn" data-lang="en"><span class="flag">🇬🇧</span> English</button>
     <button class="lang-btn" data-lang="lt"><span class="flag">🇱🇹</span> Lietuvių</button>
@@ -239,7 +79,6 @@
   <!-- MAIN GAME -->
   <div id="screen-game" class="screen hidden">
     <div class="instruction" id="instructionText"></div>
-
     <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px;">
       <div class="timer" id="timerDisplay">05:00</div>
       <div id="progressWrap" style="flex:1;text-align:right;">
@@ -247,21 +86,16 @@
         <div style="display:flex;gap:5px;justify-content:flex-end;" id="stageDots"></div>
       </div>
     </div>
-
     <div class="camera-wrap">
       <video id="camera" playsinline autoplay muted></video>
       <canvas id="snap"></canvas>
-      <div class="status-pill" id="statusPill">Starting camera...</div>
+      <div class="status-pill" id="statusPill">Starting camera…</div>
     </div>
-
-    <button class="scan-btn" id="scanBtn" disabled>
-      📷 <span id="scanBtnLabel">Scan Object</span>
-    </button>
-
+    <button class="scan-btn" id="scanBtn" disabled>📷 <span id="scanBtnLabel">Scan Object</span></button>
     <button class="manual-btn" id="manualBtn"></button>
   </div>
 
-  <!-- STAGE WIN OVERLAY -->
+  <!-- STAGE WIN -->
   <div id="overlay-stage-win" class="overlay hidden">
     <div class="overlay-card">
       <div style="font-size:3rem;margin-bottom:8px;">✅</div>
@@ -271,7 +105,7 @@
     </div>
   </div>
 
-  <!-- FINAL WIN OVERLAY -->
+  <!-- FINAL WIN -->
   <div id="overlay-win" class="overlay hidden">
     <div class="overlay-card">
       <h2 id="winTitle"></h2>
@@ -281,7 +115,7 @@
     </div>
   </div>
 
-  <!-- LOSS OVERLAY -->
+  <!-- LOSS -->
   <div id="overlay-loss" class="overlay hidden">
     <div class="overlay-card loss">
       <h2 id="lossTitle"></h2>
@@ -289,7 +123,7 @@
     </div>
   </div>
 
-  <!-- MANUAL CODE OVERLAY -->
+  <!-- MANUAL CODE -->
   <div id="overlay-manual" class="overlay hidden">
     <div class="overlay-card">
       <h2 id="manualTitle"></h2>
@@ -302,120 +136,105 @@
   </div>
 
 </div>
-
 <script>
-/* =====================================================================
-   GAME CONFIGURATION
-   ===================================================================== */
-
+/* =================================================================
+   CONFIGURATION
+   ================================================================= */
 const STAGES = [
-  { object: "bench",    en: "bench",    lt: "suoliuką",   de: "Bank"     },
-  { object: "bicycle",  en: "bicycle",  lt: "dviratį",    de: "Fahrrad"  },
-  { object: "car",      en: "car",      lt: "automobilį", de: "Auto"     },
-  { object: "backpack", en: "backpack", lt: "kuprinę",    de: "Rucksack" },
-  { object: "bottle",   en: "bottle",   lt: "butelį",     de: "Flasche"  }
+  { object:"bench",    en:"bench",     lt:"suoliuką",   de:"Bank"     },
+  { object:"bicycle",  en:"bicycle",   lt:"dviratį",    de:"Fahrrad"  },
+  { object:"car",      en:"car",       lt:"automobilį", de:"Auto"     },
+  { object:"backpack", en:"backpack",  lt:"kuprinę",    de:"Rucksack" },
+  { object:"bottle",   en:"bottle",    lt:"butelį",     de:"Flasche"  }
 ];
-
 const FINAL_COORDINATES = "N 55° 43.123 E 021° 07.456";
-const TIMER_DURATION    = 300;   // seconds
+const TIMER_DURATION    = 300;
 const MANUAL_CODE       = "FOREST42";
+const CAPTURE_WIDTH     = 800;
+const CAPTURE_HEIGHT    = 600;
 
-// Vision API — how small to resize the captured frame (keeps API calls fast)
-const CAPTURE_WIDTH  = 640;
-const CAPTURE_HEIGHT = 480;
-
-/* =====================================================================
+/* =================================================================
    TRANSLATIONS
-   ===================================================================== */
-const TRANSLATIONS = {
-  en: {
-    instructionPrefix:"Find this object:",instructionSuffix:"point your camera at it and tap Scan!",
-    statusReady:"Camera ready — tap Scan",statusSending:"Analyzing image…",statusError:"Camera error. Try manual code.",
-    scanBtn:"Scan Object",manualBtn:"Manual Code",stageTitle:"Object",stageOf:"of",
-    stageWinTitle:"Found it!",stageWinNext:"Next Object →",
-    finalWinTitle:"🎉 All Objects Found!",finalWinSubtitle:"Here are your final logbook coordinates:",
-    copyBtn:"Copy Coordinates",copiedBtn:"Copied! ✓",
-    lossTitle:"Time's Up!",retryBtn:"Retry",
-    manualTitle:"Manual Code Entry",manualSubtitle:"Enter the secret code found on the object:",
-    manualSubmit:"Submit",manualCancel:"Cancel",manualError:"Incorrect code. Try again."
-  },
-  lt: {
-    instructionPrefix:"Rask šį objektą:",instructionSuffix:"nukreipk kamerą ir spustelėk Skenuoti!",
-    statusReady:"Kamera paruošta — spustelėk Skenuoti",statusSending:"Analizuojama…",statusError:"Kameros klaida. Naudokite kodą.",
-    scanBtn:"Skenuoti",manualBtn:"Įvesti kodą rankiniu būdu",stageTitle:"Objektas",stageOf:"iš",
-    stageWinTitle:"Radai!",stageWinNext:"Kitas objektas →",
-    finalWinTitle:"🎉 Visi objektai rasti!",finalWinSubtitle:"Štai jūsų finalinės koordinatės:",
-    copyBtn:"Kopijuoti koordinates",copiedBtn:"Nukopijuota! ✓",
-    lossTitle:"Laikas baigėsi!",retryBtn:"Bandyti iš naujo",
-    manualTitle:"Kodo įvedimas",manualSubtitle:"Įveskite slaptą kodą, rastą ant objekto:",
-    manualSubmit:"Patvirtinti",manualCancel:"Atšaukti",manualError:"Neteisingas kodas. Bandykite vėl."
-  },
-  de: {
-    instructionPrefix:"Finde dieses Objekt:",instructionSuffix:"richte die Kamera darauf und tippe Scan!",
-    statusReady:"Kamera bereit — tippe Scan",statusSending:"Analysiere Bild…",statusError:"Kamerafehler. Code manuell eingeben.",
-    scanBtn:"Scannen",manualBtn:"Code manuell eingeben",stageTitle:"Objekt",stageOf:"von",
-    stageWinTitle:"Gefunden!",stageWinNext:"Nächstes Objekt →",
-    finalWinTitle:"🎉 Alle Objekte gefunden!",finalWinSubtitle:"Hier sind deine finalen Koordinaten:",
-    copyBtn:"Koordinaten kopieren",copiedBtn:"Kopiert! ✓",
-    lossTitle:"Zeit abgelaufen!",retryBtn:"Erneut versuchen",
-    manualTitle:"Code-Eingabe",manualSubtitle:"Gib den geheimen Code ein, der am Objekt zu finden ist:",
-    manualSubmit:"Bestätigen",manualCancel:"Abbrechen",manualError:"Falscher Code. Versuche es erneut."
-  }
+   ================================================================= */
+const T = {
+  en:{instructionPrefix:"Find this object:",instructionSuffix:"point your camera at it and tap Scan!",statusReady:"Camera ready — tap Scan",statusSending:"Analyzing…",statusWrong:"Not found — try again",statusError:"API error — check key",scanBtn:"Scan Object",manualBtn:"Manual Code",stageTitle:"Object",stageOf:"of",stageWinTitle:"Found it!",stageWinNext:"Next Object →",finalWinTitle:"🎉 All Objects Found!",finalWinSubtitle:"Here are your final logbook coordinates:",copyBtn:"Copy Coordinates",copiedBtn:"Copied! ✓",lossTitle:"Time's Up!",retryBtn:"Retry",manualTitle:"Manual Code Entry",manualSubtitle:"Enter the secret code found on the object:",manualSubmit:"Submit",manualCancel:"Cancel",manualError:"Incorrect code. Try again."},
+  lt:{instructionPrefix:"Rask šį objektą:",instructionSuffix:"nukreipk kamerą ir spustelėk Skenuoti!",statusReady:"Kamera paruošta — spustelėk Skenuoti",statusSending:"Analizuojama…",statusWrong:"Nerasta — bandyk dar",statusError:"API klaida — patikrink raktą",scanBtn:"Skenuoti",manualBtn:"Įvesti kodą rankiniu būdu",stageTitle:"Objektas",stageOf:"iš",stageWinTitle:"Radai!",stageWinNext:"Kitas objektas →",finalWinTitle:"🎉 Visi objektai rasti!",finalWinSubtitle:"Štai jūsų finalinės koordinatės:",copyBtn:"Kopijuoti koordinates",copiedBtn:"Nukopijuota! ✓",lossTitle:"Laikas baigėsi!",retryBtn:"Bandyti iš naujo",manualTitle:"Kodo įvedimas",manualSubtitle:"Įveskite slaptą kodą, rastą ant objekto:",manualSubmit:"Patvirtinti",manualCancel:"Atšaukti",manualError:"Neteisingas kodas. Bandykite vėl."},
+  de:{instructionPrefix:"Finde dieses Objekt:",instructionSuffix:"richte die Kamera darauf und tippe Scan!",statusReady:"Kamera bereit — tippe Scan",statusSending:"Analysiere…",statusWrong:"Nicht gefunden — nochmal",statusError:"API-Fehler — Schlüssel prüfen",scanBtn:"Scannen",manualBtn:"Code manuell eingeben",stageTitle:"Objekt",stageOf:"von",stageWinTitle:"Gefunden!",stageWinNext:"Nächstes Objekt →",finalWinTitle:"🎉 Alle Objekte gefunden!",finalWinSubtitle:"Hier sind deine finalen Koordinaten:",copyBtn:"Koordinaten kopieren",copiedBtn:"Kopiert! ✓",lossTitle:"Zeit abgelaufen!",retryBtn:"Erneut versuchen",manualTitle:"Code-Eingabe",manualSubtitle:"Gib den geheimen Code ein, der am Objekt zu finden ist:",manualSubmit:"Bestätigen",manualCancel:"Abbrechen",manualError:"Falscher Code. Versuche es erneut."}
 };
 
-/* =====================================================================
+/* =================================================================
    STATE
-   ===================================================================== */
-let currentLang    = "en";
-let videoStream    = null;
-let timerInterval  = null;
-let timeRemaining  = TIMER_DURATION;
-let gameEnded      = false;
-let currentStage   = 0;
-let isSending      = false;
+   ================================================================= */
+let apiKey       = "";
+let currentLang  = "en";
+let videoStream  = null;
+let timerInterval= null;
+let timeRemaining= TIMER_DURATION;
+let gameEnded    = false;
+let currentStage = 0;
+let isSending    = false;
 
-/* =====================================================================
+/* =================================================================
    ELEMENTS
-   ===================================================================== */
-const screenLang       = document.getElementById("screen-lang");
-const screenGame       = document.getElementById("screen-game");
-const instructionText  = document.getElementById("instructionText");
-const timerDisplay     = document.getElementById("timerDisplay");
-const statusPill       = document.getElementById("statusPill");
-const stageLabel       = document.getElementById("stageLabel");
-const stageDots        = document.getElementById("stageDots");
-const video            = document.getElementById("camera");
-const snapCanvas       = document.getElementById("snap");
-const scanBtn          = document.getElementById("scanBtn");
-const scanBtnLabel     = document.getElementById("scanBtnLabel");
-const manualBtn        = document.getElementById("manualBtn");
+   ================================================================= */
+const $ = id => document.getElementById(id);
+const screenKey      = $("screen-key");
+const screenLang     = $("screen-lang");
+const screenGame     = $("screen-game");
+const keyInput       = $("keyInput");
+const keySubmit      = $("keySubmit");
+const keyError       = $("keyError");
+const instructionText= $("instructionText");
+const timerDisplay   = $("timerDisplay");
+const statusPill     = $("statusPill");
+const stageLabel     = $("stageLabel");
+const stageDots      = $("stageDots");
+const video          = $("camera");
+const snapCanvas     = $("snap");
+const scanBtn        = $("scanBtn");
+const scanBtnLabel   = $("scanBtnLabel");
+const manualBtn      = $("manualBtn");
+const overlayStageWin= $("overlay-stage-win");
+const stageWinTitle  = $("stageWinTitle");
+const stageWinObject = $("stageWinObject");
+const nextStageBtn   = $("nextStageBtn");
+const overlayWin     = $("overlay-win");
+const winTitle       = $("winTitle");
+const winSubtitle    = $("winSubtitle");
+const winCoords      = $("winCoords");
+const copyBtn        = $("copyBtn");
+const overlayLoss    = $("overlay-loss");
+const lossTitle      = $("lossTitle");
+const retryBtn       = $("retryBtn");
+const overlayManual  = $("overlay-manual");
+const manualTitle    = $("manualTitle");
+const manualSubtitle = $("manualSubtitle");
+const manualInput    = $("manualInput");
+const manualError    = $("manualError");
+const manualSubmit   = $("manualSubmit");
+const manualCancel   = $("manualCancel");
 
-const overlayStageWin  = document.getElementById("overlay-stage-win");
-const stageWinTitle    = document.getElementById("stageWinTitle");
-const stageWinObject   = document.getElementById("stageWinObject");
-const nextStageBtn     = document.getElementById("nextStageBtn");
+/* =================================================================
+   BOOT — show key screen first
+   ================================================================= */
+screenKey.classList.remove("hidden");
 
-const overlayWin       = document.getElementById("overlay-win");
-const winTitle         = document.getElementById("winTitle");
-const winSubtitle      = document.getElementById("winSubtitle");
-const winCoords        = document.getElementById("winCoords");
-const copyBtn          = document.getElementById("copyBtn");
+keySubmit.addEventListener("click", () => {
+  const val = keyInput.value.trim();
+  if (!val.startsWith("sk-ant-") && !val.startsWith("sk-")) {
+    keyError.textContent = "That doesn't look like an Anthropic key (should start with sk-ant-…)";
+    return;
+  }
+  apiKey = val;
+  keyError.textContent = "";
+  screenKey.classList.add("hidden");
+  screenLang.classList.remove("hidden");
+});
+keyInput.addEventListener("keydown", e => { if (e.key === "Enter") keySubmit.click(); });
 
-const overlayLoss      = document.getElementById("overlay-loss");
-const lossTitle        = document.getElementById("lossTitle");
-const retryBtn         = document.getElementById("retryBtn");
-
-const overlayManual    = document.getElementById("overlay-manual");
-const manualTitle      = document.getElementById("manualTitle");
-const manualSubtitle   = document.getElementById("manualSubtitle");
-const manualInput      = document.getElementById("manualInput");
-const manualError      = document.getElementById("manualError");
-const manualSubmit     = document.getElementById("manualSubmit");
-const manualCancel     = document.getElementById("manualCancel");
-
-/* =====================================================================
+/* =================================================================
    LANGUAGE SELECT
-   ===================================================================== */
+   ================================================================= */
 document.querySelectorAll(".lang-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     currentLang = btn.dataset.lang;
@@ -425,91 +244,70 @@ document.querySelectorAll(".lang-btn").forEach(btn => {
   });
 });
 
-function tr() { return TRANSLATIONS[currentLang]; }
+function tr() { return T[currentLang]; }
 
-/* =====================================================================
+/* =================================================================
    UI HELPERS
-   ===================================================================== */
+   ================================================================= */
 function applyTranslations() {
-  const T = tr();
+  const L = tr();
   const stage = STAGES[currentStage];
-  const objName = stage[currentLang];
-
-  instructionText.innerHTML = `<b>${T.instructionPrefix}</b> ${objName}, ${T.instructionSuffix}`;
-  manualBtn.textContent     = T.manualBtn;
-  scanBtnLabel.textContent  = T.scanBtn;
-
-  stageLabel.textContent    = `${T.stageTitle} ${currentStage + 1} ${T.stageOf} ${STAGES.length}`;
-
-  stageWinTitle.textContent  = T.stageWinTitle;
-  stageWinObject.textContent = objName;
-  nextStageBtn.textContent   = T.stageWinNext;
-
-  winTitle.textContent    = T.finalWinTitle;
-  winSubtitle.textContent = T.finalWinSubtitle;
-  winCoords.textContent   = FINAL_COORDINATES;
-  copyBtn.textContent     = T.copyBtn;
-
-  lossTitle.textContent   = T.lossTitle;
-  retryBtn.textContent    = T.retryBtn;
-
-  manualTitle.textContent    = T.manualTitle;
-  manualSubtitle.textContent = T.manualSubtitle;
-  manualSubmit.textContent   = T.manualSubmit;
-  manualCancel.textContent   = T.manualCancel;
+  const obj   = stage[currentLang];
+  instructionText.innerHTML = `<b>${L.instructionPrefix}</b> ${obj}, ${L.instructionSuffix}`;
+  manualBtn.textContent     = L.manualBtn;
+  scanBtnLabel.textContent  = L.scanBtn;
+  stageLabel.textContent    = `${L.stageTitle} ${currentStage+1} ${L.stageOf} ${STAGES.length}`;
+  stageWinTitle.textContent  = L.stageWinTitle;
+  stageWinObject.textContent = obj;
+  nextStageBtn.textContent   = L.stageWinNext;
+  winTitle.textContent       = L.finalWinTitle;
+  winSubtitle.textContent    = L.finalWinSubtitle;
+  winCoords.textContent      = FINAL_COORDINATES;
+  copyBtn.textContent        = L.copyBtn;
+  lossTitle.textContent      = L.lossTitle;
+  retryBtn.textContent       = L.retryBtn;
+  manualTitle.textContent    = L.manualTitle;
+  manualSubtitle.textContent = L.manualSubtitle;
+  manualSubmit.textContent   = L.manualSubmit;
+  manualCancel.textContent   = L.manualCancel;
   manualError.textContent    = "";
 }
 
 function renderDots() {
   stageDots.innerHTML = "";
-  STAGES.forEach((_, i) => {
-    const dot = document.createElement("div");
-    dot.className = "stage-dot" + (i < currentStage ? " done" : i === currentStage ? " active" : "");
-    stageDots.appendChild(dot);
+  STAGES.forEach((_,i) => {
+    const d = document.createElement("div");
+    d.className = "stage-dot" + (i < currentStage ? " done" : i === currentStage ? " active" : "");
+    stageDots.appendChild(d);
   });
 }
 
-function setStatus(key, extraClass) {
-  const text = tr()[key] || key;
-  statusPill.textContent = text;
-  statusPill.className = "status-pill" + (extraClass ? " " + extraClass : "");
+function setStatus(key, cls) {
+  statusPill.textContent = tr()[key] || key;
+  statusPill.className   = "status-pill" + (cls ? " "+cls : "");
 }
 
-/* =====================================================================
-   GAME START / RESET
-   ===================================================================== */
+/* =================================================================
+   GAME
+   ================================================================= */
 async function startGame() {
-  gameEnded     = false;
-  currentStage  = 0;
-  timeRemaining = TIMER_DURATION;
-  isSending     = false;
+  gameEnded = false; currentStage = 0; timeRemaining = TIMER_DURATION; isSending = false;
   timerDisplay.classList.remove("warning");
-  overlayWin.classList.add("hidden");
-  overlayLoss.classList.add("hidden");
-  overlayStageWin.classList.add("hidden");
+  ["overlay-win","overlay-loss","overlay-stage-win"].forEach(id => $(id).classList.add("hidden"));
   scanBtn.disabled = true;
-
-  applyTranslations();
-  renderDots();
-  updateTimerDisplay();
-  startTimer();
+  applyTranslations(); renderDots(); updateTimerDisplay(); startTimer();
   await startCamera();
 }
 
 function advanceStage() {
   currentStage++;
   overlayStageWin.classList.add("hidden");
-  applyTranslations();
-  renderDots();
-  setStatus("statusReady", "scanning");
+  applyTranslations(); renderDots();
+  setStatus("statusReady","ready");
   scanBtn.disabled = false;
 }
-
 nextStageBtn.addEventListener("click", advanceStage);
 
-/* =====================================================================
-   TIMER
-   ===================================================================== */
 function startTimer() {
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
@@ -519,100 +317,86 @@ function startTimer() {
     if (timeRemaining <= 0) endGame("loss");
   }, 1000);
 }
-
 function updateTimerDisplay() {
-  const m = Math.floor(Math.max(timeRemaining, 0) / 60);
-  const s = Math.max(timeRemaining, 0) % 60;
+  const m = Math.floor(Math.max(timeRemaining,0)/60);
+  const s = Math.max(timeRemaining,0) % 60;
   timerDisplay.textContent = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
 
-/* =====================================================================
+/* =================================================================
    CAMERA
-   ===================================================================== */
+   ================================================================= */
 async function startCamera() {
   try {
     videoStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
+      video:{ facingMode:"environment", width:{ideal:1280}, height:{ideal:720} }, audio:false
     });
     video.srcObject = videoStream;
     await video.play();
-    setStatus("statusReady", "scanning");
+    setStatus("statusReady","ready");
     scanBtn.disabled = false;
-  } catch (err) {
-    setStatus("statusError");
-    console.error("Camera error:", err);
+  } catch(err) {
+    setStatus("statusError","error");
+    console.error("Camera:",err);
   }
 }
-
 function stopCamera() {
-  if (videoStream) { videoStream.getTracks().forEach(t => t.stop()); videoStream = null; }
+  if (videoStream) { videoStream.getTracks().forEach(t=>t.stop()); videoStream=null; }
 }
 
-/* =====================================================================
-   CAPTURE FRAME → BASE64
-   ===================================================================== */
+/* =================================================================
+   CAPTURE + VISION API
+   ================================================================= */
 function captureFrame() {
   const ctx = snapCanvas.getContext("2d");
   snapCanvas.width  = CAPTURE_WIDTH;
   snapCanvas.height = CAPTURE_HEIGHT;
   ctx.drawImage(video, 0, 0, CAPTURE_WIDTH, CAPTURE_HEIGHT);
-  // JPEG at 0.75 quality — good enough for object ID, much smaller payload
-  return snapCanvas.toDataURL("image/jpeg", 0.75).split(",")[1];
+  return snapCanvas.toDataURL("image/jpeg", 0.82).split(",")[1];
 }
 
-/* =====================================================================
-   VISION API — ask Claude if the target object is in the frame
-   ===================================================================== */
-async function checkImageWithClaude(base64Image) {
-  const target    = STAGES[currentStage].object;
-  const objLabel  = STAGES[currentStage][currentLang];
-
-  const prompt = `You are a geocache field-puzzle assistant. Look at this photo and answer ONLY with the single word YES or NO.
-Is there a ${target} clearly visible in this image?
-Rules:
-- Answer YES only if the object is unambiguous and prominently in the frame.
-- Answer NO if it is absent, partially cut off, or unclear.
-- Output exactly one word: YES or NO`;
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+async function checkWithClaude(b64) {
+  const target = STAGES[currentStage].object;
+  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-api-key": apiKey,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-calls":"true"
+    },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 10,
-      messages: [{
-        role: "user",
-        content: [
-          {
-            type: "image",
-            source: { type: "base64", media_type: "image/jpeg", data: base64Image }
-          },
-          { type: "text", text: prompt }
+      model:"claude-haiku-4-5-20251001",
+      max_tokens:10,
+      messages:[{
+        role:"user",
+        content:[
+          { type:"image", source:{ type:"base64", media_type:"image/jpeg", data:b64 } },
+          { type:"text",  text:`Is there a ${target} clearly visible in this photo? Reply with only the single word YES or NO.` }
         ]
       }]
     })
   });
-
-  if (!response.ok) throw new Error("API error " + response.status);
-  const data = await response.json();
-  const text = (data.content || []).map(b => b.text || "").join("").trim().toUpperCase();
-  return text.startsWith("YES");
+  if (!resp.ok) {
+    const err = await resp.json().catch(()=>({}));
+    throw new Error(err.error?.message || "HTTP "+resp.status);
+  }
+  const data = await resp.json();
+  const answer = (data.content||[]).map(b=>b.text||"").join("").trim().toUpperCase();
+  return answer.startsWith("YES");
 }
 
-/* =====================================================================
+/* =================================================================
    SCAN BUTTON
-   ===================================================================== */
+   ================================================================= */
 scanBtn.addEventListener("click", async () => {
   if (isSending || gameEnded) return;
   isSending = true;
   scanBtn.disabled = true;
-  setStatus("statusSending", "sending");
-
+  setStatus("statusSending","sending");
   try {
-    const b64 = captureFrame();
-    const found = await checkImageWithClaude(b64);
-
+    const b64   = captureFrame();
+    const found = await checkWithClaude(b64);
     if (found) {
       if (currentStage === STAGES.length - 1) {
         endGame("win");
@@ -620,71 +404,46 @@ scanBtn.addEventListener("click", async () => {
         overlayStageWin.classList.remove("hidden");
       }
     } else {
-      setStatus("statusReady", "scanning");
+      setStatus("statusWrong","error");
+      setTimeout(() => { setStatus("statusReady","ready"); }, 1800);
       scanBtn.disabled = false;
     }
-  } catch (err) {
-    console.error("Vision API error:", err);
-    setStatus("statusReady", "scanning");
+  } catch(err) {
+    console.error("Vision API:",err);
+    keyError.textContent = "";
+    setStatus("statusError","error");
     scanBtn.disabled = false;
   } finally {
     isSending = false;
   }
 });
 
-/* =====================================================================
+/* =================================================================
    END GAME
-   ===================================================================== */
+   ================================================================= */
 function endGame(result) {
   if (gameEnded) return;
   gameEnded = true;
   clearInterval(timerInterval);
   stopCamera();
   overlayStageWin.classList.add("hidden");
-  if (result === "win") {
-    overlayWin.classList.remove("hidden");
-  } else {
-    overlayLoss.classList.remove("hidden");
-  }
+  $(result==="win" ? "overlay-win" : "overlay-loss").classList.remove("hidden");
 }
 
-/* =====================================================================
-   COPY COORDS
-   ===================================================================== */
 copyBtn.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(FINAL_COORDINATES);
-    copyBtn.textContent = tr().copiedBtn;
-    setTimeout(() => { copyBtn.textContent = tr().copyBtn; }, 2500);
-  } catch {
-    const range = document.createRange();
-    range.selectNode(winCoords);
-    window.getSelection().removeAllRanges();
-    window.getSelection().addRange(range);
-  }
+  try { await navigator.clipboard.writeText(FINAL_COORDINATES); copyBtn.textContent = tr().copiedBtn; setTimeout(()=>{copyBtn.textContent=tr().copyBtn;},2500); }
+  catch { const r=document.createRange(); r.selectNode(winCoords); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); }
 });
+retryBtn.addEventListener("click", () => { overlayLoss.classList.add("hidden"); startGame(); });
 
-/* =====================================================================
-   RETRY
-   ===================================================================== */
-retryBtn.addEventListener("click", () => {
-  overlayLoss.classList.add("hidden");
-  startGame();
-});
-
-/* =====================================================================
+/* =================================================================
    MANUAL CODE
-   ===================================================================== */
-manualBtn.addEventListener("click", () => {
-  manualInput.value = "";
-  manualError.textContent = "";
-  overlayManual.classList.remove("hidden");
-});
-manualCancel.addEventListener("click", () => { overlayManual.classList.add("hidden"); });
+   ================================================================= */
+manualBtn.addEventListener("click", () => { manualInput.value=""; manualError.textContent=""; overlayManual.classList.remove("hidden"); });
+manualCancel.addEventListener("click", () => overlayManual.classList.add("hidden"));
 manualSubmit.addEventListener("click", () => {
   if (manualInput.value.trim().toUpperCase() === MANUAL_CODE.toUpperCase()) {
-    overlayManual.classList.add("hidden");
-    endGame("win");
+    overlayManual.classList.add("hidden"); endGame("win");
   } else {
     manualError.textContent = tr().manualError;
   }
