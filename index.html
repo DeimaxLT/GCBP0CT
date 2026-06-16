@@ -27,6 +27,16 @@
   .status-pill.ready{background:rgba(74,117,44,.85);}
   .status-pill.sending{background:rgba(0,70,160,.75);}
   .status-pill.error{background:rgba(160,50,50,.85);}
+
+  /* Debug overlay */
+  #debugOverlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+  #debugList{position:absolute;top:8px;left:8px;right:8px;display:flex;flex-direction:column;gap:4px;}
+  .debug-tag{background:rgba(0,0,0,.72);color:#fff;font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;width:fit-content;}
+  .debug-tag.highlight{background:rgba(74,117,44,.9);color:#fff;}
+
+  /* Debug toggle */
+  .debug-toggle{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);border:none;color:#fff;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer;z-index:10;}
+
   .scan-btn{width:100%;padding:15px;font-size:1.15rem;font-weight:700;border:none;border-radius:12px;background:#fff;color:var(--green-dark);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 6px rgba(0,0,0,.25);}
   .scan-btn:disabled{opacity:.5;cursor:not-allowed;}
   .scan-btn:active:not(:disabled){background:var(--bg);}
@@ -43,33 +53,18 @@
   .action-btn:active{background:var(--green-dark);}
   input.code-input{width:100%;padding:12px;font-size:1.1rem;border:2px solid var(--green);border-radius:10px;text-align:center;margin:10px 0;color:var(--text);background:#fff;}
   .error-text{color:var(--danger);font-size:.9rem;min-height:1.2em;}
-  /* API key screen */
-  .key-box{background:rgba(255,255,255,0.15);border-radius:14px;padding:24px;width:100%;display:flex;flex-direction:column;gap:12px;}
-  .key-box p{font-size:.95rem;line-height:1.5;color:#fff;opacity:.9;}
-  .key-box a{color:#cff;font-size:.85rem;}
-  input.key-input{width:100%;padding:13px;font-size:1rem;border:none;border-radius:10px;text-align:center;background:#fff;color:var(--text);font-family:monospace;letter-spacing:.05em;}
-  .key-btn{width:100%;padding:14px;font-size:1.1rem;font-weight:700;border:none;border-radius:10px;background:var(--green-dark);color:#fff;cursor:pointer;}
-  .key-btn:active{opacity:.85;}
-  .key-error{color:#fbb;font-size:.9rem;min-height:1.2em;text-align:center;}
+
+  /* Loading model banner */
+  #modelBanner{width:100%;background:rgba(0,0,0,.35);border-radius:10px;padding:10px 14px;font-size:.9rem;text-align:center;color:#fff;}
+  #modelBar{height:6px;background:rgba(255,255,255,.2);border-radius:3px;margin-top:6px;overflow:hidden;}
+  #modelFill{height:100%;width:0%;background:#fff;border-radius:3px;transition:width .3s;}
 </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- API KEY SCREEN -->
-  <div id="screen-key" class="screen hidden">
-    <div class="lang-title" style="margin-top:24px;">🔑 API Key Required</div>
-    <div class="key-box">
-      <p>This puzzle uses AI vision to identify objects. Paste your <strong>Anthropic API key</strong> below — it stays in memory only and is never saved.</p>
-      <p>Get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
-      <input class="key-input" id="keyInput" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
-      <div class="key-error" id="keyError"></div>
-      <button class="key-btn" id="keySubmit">Continue →</button>
-    </div>
-  </div>
-
   <!-- LANGUAGE SELECT -->
-  <div id="screen-lang" class="screen hidden">
+  <div id="screen-lang" class="screen">
     <div class="lang-title">Select your language / Pasirinkite kalbą / Sprache wählen</div>
     <button class="lang-btn" data-lang="en"><span class="flag">🇬🇧</span> English</button>
     <button class="lang-btn" data-lang="lt"><span class="flag">🇱🇹</span> Lietuvių</button>
@@ -78,6 +73,10 @@
 
   <!-- MAIN GAME -->
   <div id="screen-game" class="screen hidden">
+    <div id="modelBanner">
+      Loading object detector… <span id="modelPct">0%</span>
+      <div id="modelBar"><div id="modelFill"></div></div>
+    </div>
     <div class="instruction" id="instructionText"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px;">
       <div class="timer" id="timerDisplay">05:00</div>
@@ -89,7 +88,11 @@
     <div class="camera-wrap">
       <video id="camera" playsinline autoplay muted></video>
       <canvas id="snap"></canvas>
-      <div class="status-pill" id="statusPill">Starting camera…</div>
+      <div id="debugOverlay">
+        <div id="debugList"></div>
+      </div>
+      <button class="debug-toggle" id="debugToggle">🔍 Debug OFF</button>
+      <div class="status-pill" id="statusPill">Loading model…</div>
     </div>
     <button class="scan-btn" id="scanBtn" disabled>📷 <span id="scanBtnLabel">Scan Object</span></button>
     <button class="manual-btn" id="manualBtn"></button>
@@ -136,9 +139,14 @@
   </div>
 
 </div>
+
+<!-- TensorFlow.js + COCO-SSD (free, runs in browser) -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+
 <script>
 /* =================================================================
-   CONFIGURATION
+   CONFIGURATION — edit these values
    ================================================================= */
 const STAGES = [
   { object:"bench",    en:"bench",     lt:"suoliuką",   de:"Bank"     },
@@ -150,87 +158,85 @@ const STAGES = [
 const FINAL_COORDINATES = "N 55° 43.123 E 021° 07.456";
 const TIMER_DURATION    = 300;
 const MANUAL_CODE       = "FOREST42";
-const CAPTURE_WIDTH     = 800;
-const CAPTURE_HEIGHT    = 600;
+
+// Confidence threshold — lower = more lenient detection (0.0 to 1.0)
+const CONFIDENCE_THRESHOLD = 0.30;
+
+// How many frames to sample per scan attempt
+const SCAN_FRAMES = 6;
+const FRAME_DELAY_MS = 300;
+
+// Synonyms: what COCO-SSD might call each object
+const SYNONYMS = {
+  bench:    ["bench", "chair", "couch", "sofa"],
+  bicycle:  ["bicycle", "bike"],
+  car:      ["car", "truck", "vehicle", "bus", "motorcycle"],
+  backpack: ["backpack", "handbag", "suitcase", "bag"],
+  bottle:   ["bottle", "cup", "wine glass", "vase"],
+};
 
 /* =================================================================
    TRANSLATIONS
    ================================================================= */
 const T = {
-  en:{instructionPrefix:"Find this object:",instructionSuffix:"point your camera at it and tap Scan!",statusReady:"Camera ready — tap Scan",statusSending:"Analyzing…",statusWrong:"Not found — try again",statusError:"API error — check key",scanBtn:"Scan Object",manualBtn:"Manual Code",stageTitle:"Object",stageOf:"of",stageWinTitle:"Found it!",stageWinNext:"Next Object →",finalWinTitle:"🎉 All Objects Found!",finalWinSubtitle:"Here are your final logbook coordinates:",copyBtn:"Copy Coordinates",copiedBtn:"Copied! ✓",lossTitle:"Time's Up!",retryBtn:"Retry",manualTitle:"Manual Code Entry",manualSubtitle:"Enter the secret code found on the object:",manualSubmit:"Submit",manualCancel:"Cancel",manualError:"Incorrect code. Try again."},
-  lt:{instructionPrefix:"Rask šį objektą:",instructionSuffix:"nukreipk kamerą ir spustelėk Skenuoti!",statusReady:"Kamera paruošta — spustelėk Skenuoti",statusSending:"Analizuojama…",statusWrong:"Nerasta — bandyk dar",statusError:"API klaida — patikrink raktą",scanBtn:"Skenuoti",manualBtn:"Įvesti kodą rankiniu būdu",stageTitle:"Objektas",stageOf:"iš",stageWinTitle:"Radai!",stageWinNext:"Kitas objektas →",finalWinTitle:"🎉 Visi objektai rasti!",finalWinSubtitle:"Štai jūsų finalinės koordinatės:",copyBtn:"Kopijuoti koordinates",copiedBtn:"Nukopijuota! ✓",lossTitle:"Laikas baigėsi!",retryBtn:"Bandyti iš naujo",manualTitle:"Kodo įvedimas",manualSubtitle:"Įveskite slaptą kodą, rastą ant objekto:",manualSubmit:"Patvirtinti",manualCancel:"Atšaukti",manualError:"Neteisingas kodas. Bandykite vėl."},
-  de:{instructionPrefix:"Finde dieses Objekt:",instructionSuffix:"richte die Kamera darauf und tippe Scan!",statusReady:"Kamera bereit — tippe Scan",statusSending:"Analysiere…",statusWrong:"Nicht gefunden — nochmal",statusError:"API-Fehler — Schlüssel prüfen",scanBtn:"Scannen",manualBtn:"Code manuell eingeben",stageTitle:"Objekt",stageOf:"von",stageWinTitle:"Gefunden!",stageWinNext:"Nächstes Objekt →",finalWinTitle:"🎉 Alle Objekte gefunden!",finalWinSubtitle:"Hier sind deine finalen Koordinaten:",copyBtn:"Koordinaten kopieren",copiedBtn:"Kopiert! ✓",lossTitle:"Zeit abgelaufen!",retryBtn:"Erneut versuchen",manualTitle:"Code-Eingabe",manualSubtitle:"Gib den geheimen Code ein, der am Objekt zu finden ist:",manualSubmit:"Bestätigen",manualCancel:"Abbrechen",manualError:"Falscher Code. Versuche es erneut."}
+  en:{instructionPrefix:"Find this object:",instructionSuffix:"point your camera at it and tap Scan!",statusReady:"Camera ready — tap Scan",statusSending:"Scanning…",statusWrong:"Not found — try again",statusError:"Model error — try again",scanBtn:"Scan Object",manualBtn:"Manual Code",stageTitle:"Object",stageOf:"of",stageWinTitle:"Found it!",stageWinNext:"Next Object →",finalWinTitle:"🎉 All Objects Found!",finalWinSubtitle:"Here are your final logbook coordinates:",copyBtn:"Copy Coordinates",copiedBtn:"Copied! ✓",lossTitle:"Time's Up!",retryBtn:"Retry",manualTitle:"Manual Code Entry",manualSubtitle:"Enter the secret code found on the object:",manualSubmit:"Submit",manualCancel:"Cancel",manualError:"Incorrect code. Try again.",modelLoading:"Loading AI detector…",modelReady:"AI ready — tap Scan"},
+  lt:{instructionPrefix:"Rask šį objektą:",instructionSuffix:"nukreipk kamerą ir spustelėk Skenuoti!",statusReady:"Kamera paruošta — spustelėk Skenuoti",statusSending:"Skenuojama…",statusWrong:"Nerasta — bandyk dar",statusError:"Klaida — bandyk dar",scanBtn:"Skenuoti",manualBtn:"Įvesti kodą rankiniu būdu",stageTitle:"Objektas",stageOf:"iš",stageWinTitle:"Radai!",stageWinNext:"Kitas objektas →",finalWinTitle:"🎉 Visi objektai rasti!",finalWinSubtitle:"Štai jūsų finalinės koordinatės:",copyBtn:"Kopijuoti koordinates",copiedBtn:"Nukopijuota! ✓",lossTitle:"Laikas baigėsi!",retryBtn:"Bandyti iš naujo",manualTitle:"Kodo įvedimas",manualSubtitle:"Įveskite slaptą kodą, rastą ant objekto:",manualSubmit:"Patvirtinti",manualCancel:"Atšaukti",manualError:"Neteisingas kodas. Bandykite vėl.",modelLoading:"Kraunamas AI…",modelReady:"AI paruoštas — spustelėk Skenuoti"},
+  de:{instructionPrefix:"Finde dieses Objekt:",instructionSuffix:"richte die Kamera darauf und tippe Scan!",statusReady:"Kamera bereit — tippe Scan",statusSending:"Analysiere…",statusWrong:"Nicht gefunden — nochmal",statusError:"Fehler — nochmal versuchen",scanBtn:"Scannen",manualBtn:"Code manuell eingeben",stageTitle:"Objekt",stageOf:"von",stageWinTitle:"Gefunden!",stageWinNext:"Nächstes Objekt →",finalWinTitle:"🎉 Alle Objekte gefunden!",finalWinSubtitle:"Hier sind deine finalen Koordinaten:",copyBtn:"Koordinaten kopieren",copiedBtn:"Kopiert! ✓",lossTitle:"Zeit abgelaufen!",retryBtn:"Erneut versuchen",manualTitle:"Code-Eingabe",manualSubtitle:"Gib den geheimen Code ein, der am Objekt zu finden ist:",manualSubmit:"Bestätigen",manualCancel:"Abbrechen",manualError:"Falscher Code. Versuche es erneut.",modelLoading:"KI wird geladen…",modelReady:"KI bereit — tippe Scan"}
 };
 
 /* =================================================================
    STATE
    ================================================================= */
-let apiKey       = "";
-let currentLang  = "en";
-let videoStream  = null;
-let timerInterval= null;
-let timeRemaining= TIMER_DURATION;
-let gameEnded    = false;
-let currentStage = 0;
-let isSending    = false;
+let currentLang   = "en";
+let videoStream   = null;
+let timerInterval = null;
+let timeRemaining = TIMER_DURATION;
+let gameEnded     = false;
+let currentStage  = 0;
+let isSending     = false;
+let detector      = null;
+let debugMode     = false;
+let liveDetectInterval = null;
 
 /* =================================================================
    ELEMENTS
    ================================================================= */
 const $ = id => document.getElementById(id);
-const screenKey      = $("screen-key");
-const screenLang     = $("screen-lang");
-const screenGame     = $("screen-game");
-const keyInput       = $("keyInput");
-const keySubmit      = $("keySubmit");
-const keyError       = $("keyError");
-const instructionText= $("instructionText");
-const timerDisplay   = $("timerDisplay");
-const statusPill     = $("statusPill");
-const stageLabel     = $("stageLabel");
-const stageDots      = $("stageDots");
-const video          = $("camera");
-const snapCanvas     = $("snap");
-const scanBtn        = $("scanBtn");
-const scanBtnLabel   = $("scanBtnLabel");
-const manualBtn      = $("manualBtn");
-const overlayStageWin= $("overlay-stage-win");
-const stageWinTitle  = $("stageWinTitle");
-const stageWinObject = $("stageWinObject");
-const nextStageBtn   = $("nextStageBtn");
-const overlayWin     = $("overlay-win");
-const winTitle       = $("winTitle");
-const winSubtitle    = $("winSubtitle");
-const winCoords      = $("winCoords");
-const copyBtn        = $("copyBtn");
-const overlayLoss    = $("overlay-loss");
-const lossTitle      = $("lossTitle");
-const retryBtn       = $("retryBtn");
-const overlayManual  = $("overlay-manual");
-const manualTitle    = $("manualTitle");
-const manualSubtitle = $("manualSubtitle");
-const manualInput    = $("manualInput");
-const manualError    = $("manualError");
-const manualSubmit   = $("manualSubmit");
-const manualCancel   = $("manualCancel");
-
-/* =================================================================
-   BOOT — show key screen first
-   ================================================================= */
-screenKey.classList.remove("hidden");
-
-keySubmit.addEventListener("click", () => {
-  const val = keyInput.value.trim();
-  if (!val.startsWith("sk-ant-") && !val.startsWith("sk-")) {
-    keyError.textContent = "That doesn't look like an Anthropic key (should start with sk-ant-…)";
-    return;
-  }
-  apiKey = val;
-  keyError.textContent = "";
-  screenKey.classList.add("hidden");
-  screenLang.classList.remove("hidden");
-});
-keyInput.addEventListener("keydown", e => { if (e.key === "Enter") keySubmit.click(); });
+const screenLang      = $("screen-lang");
+const screenGame      = $("screen-game");
+const instructionText = $("instructionText");
+const timerDisplay    = $("timerDisplay");
+const statusPill      = $("statusPill");
+const stageLabel      = $("stageLabel");
+const stageDots       = $("stageDots");
+const video           = $("camera");
+const scanBtn         = $("scanBtn");
+const scanBtnLabel    = $("scanBtnLabel");
+const manualBtn       = $("manualBtn");
+const overlayStageWin = $("overlay-stage-win");
+const stageWinTitle   = $("stageWinTitle");
+const stageWinObject  = $("stageWinObject");
+const nextStageBtn    = $("nextStageBtn");
+const overlayWin      = $("overlay-win");
+const winTitle        = $("winTitle");
+const winSubtitle     = $("winSubtitle");
+const winCoords       = $("winCoords");
+const copyBtn         = $("copyBtn");
+const overlayLoss     = $("overlay-loss");
+const lossTitle       = $("lossTitle");
+const retryBtn        = $("retryBtn");
+const overlayManual   = $("overlay-manual");
+const manualTitle     = $("manualTitle");
+const manualSubtitle  = $("manualSubtitle");
+const manualInput     = $("manualInput");
+const manualError     = $("manualError");
+const manualSubmit    = $("manualSubmit");
+const manualCancel    = $("manualCancel");
+const modelBanner     = $("modelBanner");
+const modelPct        = $("modelPct");
+const modelFill       = $("modelFill");
+const debugToggle     = $("debugToggle");
+const debugList       = $("debugList");
 
 /* =================================================================
    LANGUAGE SELECT
@@ -253,10 +259,10 @@ function applyTranslations() {
   const L = tr();
   const stage = STAGES[currentStage];
   const obj   = stage[currentLang];
-  instructionText.innerHTML = `<b>${L.instructionPrefix}</b> ${obj}, ${L.instructionSuffix}`;
-  manualBtn.textContent     = L.manualBtn;
-  scanBtnLabel.textContent  = L.scanBtn;
-  stageLabel.textContent    = `${L.stageTitle} ${currentStage+1} ${L.stageOf} ${STAGES.length}`;
+  instructionText.innerHTML = `<b>${L.instructionPrefix}</b> ${obj} — ${L.instructionSuffix}`;
+  manualBtn.textContent      = L.manualBtn;
+  scanBtnLabel.textContent   = L.scanBtn;
+  stageLabel.textContent     = `${L.stageTitle} ${currentStage+1} ${L.stageOf} ${STAGES.length}`;
   stageWinTitle.textContent  = L.stageWinTitle;
   stageWinObject.textContent = obj;
   nextStageBtn.textContent   = L.stageWinNext;
@@ -283,7 +289,8 @@ function renderDots() {
 }
 
 function setStatus(key, cls) {
-  statusPill.textContent = tr()[key] || key;
+  const txt = tr()[key] || key;
+  statusPill.textContent = txt;
   statusPill.className   = "status-pill" + (cls ? " "+cls : "");
 }
 
@@ -297,6 +304,7 @@ async function startGame() {
   scanBtn.disabled = true;
   applyTranslations(); renderDots(); updateTimerDisplay(); startTimer();
   await startCamera();
+  await loadDetector();
 }
 
 function advanceStage() {
@@ -333,70 +341,147 @@ async function startCamera() {
     });
     video.srcObject = videoStream;
     await video.play();
-    setStatus("statusReady","ready");
-    scanBtn.disabled = false;
   } catch(err) {
     setStatus("statusError","error");
     console.error("Camera:",err);
   }
 }
 function stopCamera() {
+  clearInterval(liveDetectInterval);
   if (videoStream) { videoStream.getTracks().forEach(t=>t.stop()); videoStream=null; }
 }
 
 /* =================================================================
-   CAPTURE + VISION API
+   LOAD COCO-SSD MODEL
    ================================================================= */
-function captureFrame() {
-  const ctx = snapCanvas.getContext("2d");
-  snapCanvas.width  = CAPTURE_WIDTH;
-  snapCanvas.height = CAPTURE_HEIGHT;
-  ctx.drawImage(video, 0, 0, CAPTURE_WIDTH, CAPTURE_HEIGHT);
-  return snapCanvas.toDataURL("image/jpeg", 0.82).split(",")[1];
+async function loadDetector() {
+  if (detector) {
+    modelBanner.classList.add("hidden");
+    setStatus("statusReady","ready");
+    scanBtn.disabled = false;
+    startLiveDebug();
+    return;
+  }
+
+  modelBanner.classList.remove("hidden");
+  setModelProgress(10);
+
+  try {
+    // Fake progress while loading
+    let fakeP = 10;
+    const fakeInterval = setInterval(() => {
+      fakeP = Math.min(fakeP + 5, 85);
+      setModelProgress(fakeP);
+    }, 400);
+
+    detector = await cocoSsd.load({ base: "mobilenet_v2" });
+
+    clearInterval(fakeInterval);
+    setModelProgress(100);
+    await new Promise(r => setTimeout(r, 400));
+    modelBanner.classList.add("hidden");
+    setStatus("modelReady","ready");
+    scanBtn.disabled = false;
+    startLiveDebug();
+  } catch(err) {
+    console.error("Model load error:", err);
+    setStatus("statusError","error");
+  }
 }
 
-async function checkWithClaude(b64) {
-  const target = STAGES[currentStage].object;
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "x-api-key": apiKey,
-      "anthropic-version":"2023-06-01",
-      "anthropic-dangerous-direct-browser-calls":"true"
-    },
-    body: JSON.stringify({
-      model:"claude-haiku-4-5-20251001",
-      max_tokens:10,
-      messages:[{
-        role:"user",
-        content:[
-          { type:"image", source:{ type:"base64", media_type:"image/jpeg", data:b64 } },
-          { type:"text",  text:`Is there a ${target} clearly visible in this photo? Reply with only the single word YES or NO.` }
-        ]
-      }]
-    })
-  });
-  if (!resp.ok) {
-    const err = await resp.json().catch(()=>({}));
-    throw new Error(err.error?.message || "HTTP "+resp.status);
+function setModelProgress(pct) {
+  modelFill.style.width = pct + "%";
+  modelPct.textContent  = pct + "%";
+}
+
+/* =================================================================
+   DETECT on a single video frame
+   ================================================================= */
+async function detectFrame() {
+  if (!detector || !videoStream) return [];
+  try {
+    const predictions = await detector.detect(video);
+    return predictions;
+  } catch(e) {
+    return [];
   }
-  const data = await resp.json();
-  const answer = (data.content||[]).map(b=>b.text||"").join("").trim().toUpperCase();
-  return answer.startsWith("YES");
+}
+
+/* =================================================================
+   LIVE DEBUG — shows what AI sees in real time
+   ================================================================= */
+function startLiveDebug() {
+  clearInterval(liveDetectInterval);
+  liveDetectInterval = setInterval(async () => {
+    if (!debugMode || gameEnded) return;
+    const preds = await detectFrame();
+    renderDebugTags(preds);
+  }, 500);
+}
+
+function renderDebugTags(preds) {
+  debugList.innerHTML = "";
+  if (!preds.length) {
+    const tag = document.createElement("div");
+    tag.className = "debug-tag";
+    tag.textContent = "nothing detected";
+    debugList.appendChild(tag);
+    return;
+  }
+  const targetSynonyms = SYNONYMS[STAGES[currentStage].object] || [STAGES[currentStage].object];
+  preds.forEach(p => {
+    const label = p.class.toLowerCase();
+    const pct   = Math.round(p.score * 100);
+    const isMatch = targetSynonyms.includes(label);
+    const tag = document.createElement("div");
+    tag.className = "debug-tag" + (isMatch ? " highlight" : "");
+    tag.textContent = `${p.class} ${pct}%${isMatch ? " ✓ TARGET" : ""}`;
+    debugList.appendChild(tag);
+  });
+}
+
+/* =================================================================
+   DEBUG TOGGLE
+   ================================================================= */
+debugToggle.addEventListener("click", () => {
+  debugMode = !debugMode;
+  debugToggle.textContent = debugMode ? "🔍 Debug ON" : "🔍 Debug OFF";
+  if (!debugMode) debugList.innerHTML = "";
+});
+
+/* =================================================================
+   MULTI-FRAME SCAN
+   ================================================================= */
+async function multiFrameScan() {
+  const targetSynonyms = SYNONYMS[STAGES[currentStage].object] || [STAGES[currentStage].object];
+  let hits = 0;
+
+  for (let i = 0; i < SCAN_FRAMES; i++) {
+    const preds = await detectFrame();
+    if (debugMode) renderDebugTags(preds);
+    const found = preds.some(p =>
+      p.score >= CONFIDENCE_THRESHOLD &&
+      targetSynonyms.includes(p.class.toLowerCase())
+    );
+    if (found) hits++;
+    if (i < SCAN_FRAMES - 1) await new Promise(r => setTimeout(r, FRAME_DELAY_MS));
+  }
+
+  // Need at least 2 out of SCAN_FRAMES hits to confirm
+  return hits >= 2;
 }
 
 /* =================================================================
    SCAN BUTTON
    ================================================================= */
 scanBtn.addEventListener("click", async () => {
-  if (isSending || gameEnded) return;
+  if (isSending || gameEnded || !detector) return;
   isSending = true;
   scanBtn.disabled = true;
   setStatus("statusSending","sending");
+
   try {
-    const b64   = captureFrame();
-    const found = await checkWithClaude(b64);
+    const found = await multiFrameScan();
     if (found) {
       if (currentStage === STAGES.length - 1) {
         endGame("win");
@@ -409,8 +494,7 @@ scanBtn.addEventListener("click", async () => {
       scanBtn.disabled = false;
     }
   } catch(err) {
-    console.error("Vision API:",err);
-    keyError.textContent = "";
+    console.error("Scan error:", err);
     setStatus("statusError","error");
     scanBtn.disabled = false;
   } finally {
@@ -431,8 +515,16 @@ function endGame(result) {
 }
 
 copyBtn.addEventListener("click", async () => {
-  try { await navigator.clipboard.writeText(FINAL_COORDINATES); copyBtn.textContent = tr().copiedBtn; setTimeout(()=>{copyBtn.textContent=tr().copyBtn;},2500); }
-  catch { const r=document.createRange(); r.selectNode(winCoords); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); }
+  try {
+    await navigator.clipboard.writeText(FINAL_COORDINATES);
+    copyBtn.textContent = tr().copiedBtn;
+    setTimeout(() => { copyBtn.textContent = tr().copyBtn; }, 2500);
+  } catch {
+    const r = document.createRange();
+    r.selectNode(winCoords);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(r);
+  }
 });
 retryBtn.addEventListener("click", () => { overlayLoss.classList.add("hidden"); startGame(); });
 
