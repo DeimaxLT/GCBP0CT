@@ -159,12 +159,12 @@ const FINAL_COORDINATES = "N 55° 43.123 E 021° 07.456";
 const TIMER_DURATION    = 300;
 const MANUAL_CODE       = "FOREST42";
 
-// Confidence threshold — lower = more lenient detection (0.0 to 1.0)
-const CONFIDENCE_THRESHOLD = 0.30;
+// Confidence threshold — low to catch benches/photos shown to camera
+const CONFIDENCE_THRESHOLD = 0.15;
 
 // How many frames to sample per scan attempt
-const SCAN_FRAMES = 6;
-const FRAME_DELAY_MS = 300;
+const SCAN_FRAMES = 4;
+const FRAME_DELAY_MS = 400;
 
 // Synonyms: what COCO-SSD might call each object
 const SYNONYMS = {
@@ -196,7 +196,6 @@ let currentStage  = 0;
 let isSending     = false;
 let detector      = null;
 let debugMode     = false;
-let liveDetectInterval = null;
 
 /* =================================================================
    ELEMENTS
@@ -302,7 +301,7 @@ async function startGame() {
   timerDisplay.classList.remove("warning");
   ["overlay-win","overlay-loss","overlay-stage-win"].forEach(id => $(id).classList.add("hidden"));
   scanBtn.disabled = true;
-  applyTranslations(); renderDots(); updateTimerDisplay(); startTimer();
+  applyTranslations(); renderDots(); updateTimerDisplay();
   await startCamera();
   await loadDetector();
 }
@@ -347,7 +346,6 @@ async function startCamera() {
   }
 }
 function stopCamera() {
-  clearInterval(liveDetectInterval);
   if (videoStream) { videoStream.getTracks().forEach(t=>t.stop()); videoStream=null; }
 }
 
@@ -359,7 +357,7 @@ async function loadDetector() {
     modelBanner.classList.add("hidden");
     setStatus("statusReady","ready");
     scanBtn.disabled = false;
-    startLiveDebug();
+    startTimer();
     return;
   }
 
@@ -382,7 +380,7 @@ async function loadDetector() {
     modelBanner.classList.add("hidden");
     setStatus("modelReady","ready");
     scanBtn.disabled = false;
-    startLiveDebug();
+    startTimer();
   } catch(err) {
     console.error("Model load error:", err);
     setStatus("statusError","error");
@@ -408,17 +406,8 @@ async function detectFrame() {
 }
 
 /* =================================================================
-   LIVE DEBUG — shows what AI sees in real time
+   DEBUG TAGS — rendered only during/after a scan, not continuously
    ================================================================= */
-function startLiveDebug() {
-  clearInterval(liveDetectInterval);
-  liveDetectInterval = setInterval(async () => {
-    if (!debugMode || gameEnded) return;
-    const preds = await detectFrame();
-    renderDebugTags(preds);
-  }, 500);
-}
-
 function renderDebugTags(preds) {
   debugList.innerHTML = "";
   if (!preds.length) {
@@ -446,7 +435,7 @@ function renderDebugTags(preds) {
 debugToggle.addEventListener("click", () => {
   debugMode = !debugMode;
   debugToggle.textContent = debugMode ? "🔍 Debug ON" : "🔍 Debug OFF";
-  if (!debugMode) debugList.innerHTML = "";
+  debugList.innerHTML = "";
 });
 
 /* =================================================================
@@ -467,8 +456,8 @@ async function multiFrameScan() {
     if (i < SCAN_FRAMES - 1) await new Promise(r => setTimeout(r, FRAME_DELAY_MS));
   }
 
-  // Need at least 2 out of SCAN_FRAMES hits to confirm
-  return hits >= 2;
+  // Need at least 1 hit out of SCAN_FRAMES to confirm
+  return hits >= 1;
 }
 
 /* =================================================================
