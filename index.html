@@ -1,279 +1,644 @@
 <!DOCTYPE html>
-<html lang="lt">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Decrypt</title>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Geocache Field Puzzle</title>
+<style>
+  :root{
+    --green:#4A752C;
+    --green-dark:#395a21;
+    --brown:#8B5E3C;
+    --bg:#F5F3EE;
+    --text:#1C1C1C;
+    --danger:#A33;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{
+    height:100%;
+    font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--green);
+    color:#fff;
+  }
+  #app{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:16px;
+  }
+  .screen{
+    width:100%;
+    max-width:480px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:16px;
+    animation:fadeIn .35s ease;
+  }
+  .hidden{display:none !important;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 
-    html, body {
-      height: 100%;
-      background: #111;
-      font-family: 'Press Start 2P', monospace;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
+  /* ---------- Language screen ---------- */
+  .lang-title{
+    font-size:1.6rem;
+    font-weight:700;
+    color:#fff;
+    text-align:center;
+    margin-top:40px;
+  }
+  .lang-btn{
+    width:100%;
+    padding:18px;
+    font-size:1.2rem;
+    font-weight:700;
+    border:none;
+    border-radius:12px;
+    background:#fff;
+    color:var(--green-dark);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    box-shadow:0 2px 6px rgba(0,0,0,.25);
+  }
+  .lang-btn:active{background:var(--bg);}
+  .flag{font-size:1.4rem;}
 
-    .page {
-      position: fixed; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      transition: transform 0.6s cubic-bezier(0.77,0,0.18,1), opacity 0.6s ease;
-    }
-    #page-1     { transform: translateX(0);    opacity: 1; }
-    #page-1.out { transform: translateX(-110%); opacity: 0; }
-    #page-2     { transform: translateX(110%);  opacity: 0; }
-    #page-2.in  { transform: translateX(0);    opacity: 1; }
+  /* ---------- Main game screen ---------- */
+  .instruction{
+    font-size:1.1rem;
+    line-height:1.4;
+    text-align:center;
+    background:#fff;
+    border:2px solid var(--green-dark);
+    border-radius:12px;
+    padding:12px 14px;
+    width:100%;
+    color:var(--text);
+  }
+  .instruction b{color:var(--green-dark);}
 
-    .wrap {
-      display: flex; flex-direction: column; align-items: center;
-      gap: 28px; padding: 24px; width: min(400px, 96vw);
-    }
+  .timer{
+    font-size:2.6rem;
+    font-weight:800;
+    color:var(--green-dark);
+    background:#fff;
+    border:3px solid #fff;
+    border-radius:14px;
+    padding:6px 28px;
+    letter-spacing:2px;
+  }
+  .timer.warning{color:var(--danger);border-color:var(--danger);}
 
-    .heading { text-align: center; }
-    .heading .lt { font-size: 0.55rem; line-height: 2.2; color: #eee; }
-    .heading .en { font-size: 0.35rem; line-height: 2; color: #555; margin-top: 4px; }
+  .camera-wrap{
+    position:relative;
+    width:100%;
+    aspect-ratio:3/4;
+    background:#000;
+    border-radius:16px;
+    overflow:hidden;
+    border:3px solid #fff;
+  }
+  video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+  }
+  .status-pill{
+    position:absolute;
+    bottom:10px;
+    left:50%;
+    transform:translateX(-50%);
+    background:rgba(0,0,0,.6);
+    color:#fff;
+    padding:6px 14px;
+    border-radius:20px;
+    font-size:.85rem;
+    font-weight:600;
+  }
 
-    /* cells */
-    .cells { display: flex; gap: 8px; }
-    .cell {
-      width: 48px; height: 56px;
-      background: #1a1a1a; border: 2px solid #333;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.2rem; color: #eee;
-      position: relative; user-select: none;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .cell.active { border-color: #eee; }
-    .cell.active::after {
-      content: '_'; position: absolute; bottom: 6px;
-      font-size: 0.5rem; color: #eee;
-      animation: blink 0.8s step-end infinite;
-    }
-    @keyframes blink { 50% { opacity: 0; } }
-    .cell.success { border-color: #4caf50; color: #4caf50; }
-    .cell.error   { border-color: #e53935; color: #e53935; }
+  .manual-btn{
+    background:none;
+    border:none;
+    color:#fff;
+    text-decoration:underline;
+    font-size:.9rem;
+    cursor:pointer;
+    margin-top:4px;
+  }
 
-    /* status */
-    .status { min-height: 36px; text-align: center; }
-    .status .lt { font-size: 0.42rem; line-height: 2.4; }
-    .status .en { font-size: 0.3rem; line-height: 2; color: #555; margin-top: 2px; }
-    .status.err .lt { color: #e53935; }
-    .status.err .en { color: #e53935; opacity: 0.7; }
+  /* ---------- Overlays (win/loss/manual) ---------- */
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.55);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:50;
+  }
+  .overlay-card{
+    background:#fff;
+    border-radius:16px;
+    padding:28px 22px;
+    text-align:center;
+    max-width:420px;
+    width:100%;
+    box-shadow:0 6px 24px rgba(0,0,0,.25);
+  }
+  .overlay-card h2{
+    color:var(--green-dark);
+    font-size:1.6rem;
+    margin-bottom:10px;
+  }
+  .overlay-card.loss h2{color:var(--danger);}
+  .coords{
+    font-size:1.3rem;
+    font-weight:800;
+    background:var(--bg);
+    border:2px dashed var(--green);
+    border-radius:10px;
+    padding:14px;
+    margin:10px 0;
+    word-break:break-word;
+    color:var(--text);
+    letter-spacing:1px;
+  }
+  .stage-dot{
+    width:18px;height:18px;border-radius:50%;
+    background:rgba(255,255,255,0.35);
+    border:2px solid #fff;
+    transition:background .3s;
+  }
+  .stage-dot.done{background:#fff;}
+  .stage-dot.active{background:rgba(255,255,255,0.7);}
+  .action-btn{
+    width:100%;
+    padding:14px;
+    font-size:1.1rem;
+    font-weight:700;
+    border:none;
+    border-radius:10px;
+    background:var(--green);
+    color:#fff;
+    cursor:pointer;
+    margin-top:8px;
+  }
+  .action-btn:active{background:var(--green-dark);}
 
-    .wrap.shake { animation: shake 0.4s steps(4); }
-    @keyframes shake {
-      0%,100%{ transform: translateX(0); }
-      25%    { transform: translateX(-8px); }
-      75%    { transform: translateX(8px); }
-    }
-
-    /* ── CUSTOM KEYBOARD ── */
-    .keyboard {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .kb-row {
-      display: flex;
-      gap: 5px;
-      justify-content: center;
-    }
-
-    .kb-key {
-      flex: 1;
-      max-width: 44px;
-      height: 42px;
-      background: #222;
-      border: 2px solid #333;
-      border-bottom: 4px solid #444;
-      color: #ccc;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 0.45rem;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
-      transition: background 0.08s, transform 0.08s, border-bottom-width 0.08s;
-      border-radius: 2px;
-      line-height: 1;
-    }
-
-    .kb-key:active, .kb-key.pressed {
-      background: #333;
-      border-bottom-width: 2px;
-      transform: translateY(2px);
-    }
-
-    .kb-key.wide   { max-width: 68px; flex: 1.6; font-size: 0.35rem; }
-    .kb-key.space  { max-width: 140px; flex: 3.5; }
-    .kb-key.delete { max-width: 58px; flex: 1.4; font-size: 0.35rem; color: #e53935; border-color: #3a1515; border-bottom-color: #4a1c1c; }
-
-    /* page 2 */
-    .reveal { text-align: center; }
-    .reveal .lt { font-size: 0.9rem; line-height: 2; color: #eee; }
-    .reveal .en { font-size: 0.4rem; line-height: 2; color: #555; margin-top: 6px; }
-  </style>
+  input.code-input{
+    width:100%;
+    padding:12px;
+    font-size:1.1rem;
+    border:2px solid var(--green);
+    border-radius:10px;
+    text-align:center;
+    margin:10px 0;
+    color:var(--text);
+  }
+  .error-text{color:var(--danger);font-size:.9rem;min-height:1.2em;}
+</style>
 </head>
 <body>
+<div id="app">
 
-<div class="page" id="page-1">
-  <div class="wrap" id="wrap">
-    <div class="heading">
-      <div class="lt">Įvesk tekstą kurį iššifravai</div>
-      <div class="en">ENTER THE TEXT YOU DECODED</div>
+  <!-- ===================== LANGUAGE SELECT SCREEN ===================== -->
+  <div id="screen-lang" class="screen">
+    <div class="lang-title">Select your language / Pasirinkite kalbą / Sprache wählen</div>
+    <button class="lang-btn" data-lang="en"><span class="flag">🇬🇧</span> English</button>
+    <button class="lang-btn" data-lang="lt"><span class="flag">🇱🇹</span> Lietuvių</button>
+    <button class="lang-btn" data-lang="de"><span class="flag">🇩🇪</span> Deutsch</button>
+  </div>
+
+  <!-- ===================== MAIN GAME SCREEN ===================== -->
+  <div id="screen-game" class="screen hidden">
+    <div class="instruction" id="instructionText"></div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px;">
+      <div class="timer" id="timerDisplay">05:00</div>
+      <div id="progressWrap" style="flex:1;text-align:right;">
+        <div id="stageLabel" style="font-size:.85rem;font-weight:700;color:#fff;margin-bottom:4px;"></div>
+        <div style="display:flex;gap:5px;justify-content:flex-end;" id="stageDots"></div>
+      </div>
     </div>
 
-    <div class="cells" id="cells"></div>
-    <div class="status" id="status"></div>
+    <div class="camera-wrap">
+      <video id="camera" playsinline autoplay muted></video>
+      <div class="status-pill" id="statusPill">Loading model...</div>
+    </div>
 
-    <!-- Custom keyboard -->
-    <div class="keyboard" id="keyboard">
-      <div class="kb-row">
-        <div class="kb-key" data-key="Q">Q</div>
-        <div class="kb-key" data-key="W">W</div>
-        <div class="kb-key" data-key="E">E</div>
-        <div class="kb-key" data-key="R">R</div>
-        <div class="kb-key" data-key="T">T</div>
-        <div class="kb-key" data-key="Y">Y</div>
-        <div class="kb-key" data-key="U">U</div>
-        <div class="kb-key" data-key="I">I</div>
-        <div class="kb-key" data-key="O">O</div>
-        <div class="kb-key" data-key="P">P</div>
-      </div>
-      <div class="kb-row">
-        <div class="kb-key" data-key="A">A</div>
-        <div class="kb-key" data-key="S">S</div>
-        <div class="kb-key" data-key="D">D</div>
-        <div class="kb-key" data-key="F">F</div>
-        <div class="kb-key" data-key="G">G</div>
-        <div class="kb-key" data-key="H">H</div>
-        <div class="kb-key" data-key="J">J</div>
-        <div class="kb-key" data-key="K">K</div>
-        <div class="kb-key" data-key="L">L</div>
-      </div>
-      <div class="kb-row">
-        <div class="kb-key" data-key="Z">Z</div>
-        <div class="kb-key" data-key="X">X</div>
-        <div class="kb-key" data-key="C">C</div>
-        <div class="kb-key" data-key="V">V</div>
-        <div class="kb-key" data-key="B">B</div>
-        <div class="kb-key" data-key="N">N</div>
-        <div class="kb-key" data-key="M">M</div>
-        <div class="kb-key delete" data-key="BACKSPACE">⌫</div>
-      </div>
-      <div class="kb-row">
-        <div class="kb-key space" data-key=" ">SPACE</div>
-      </div>
+    <button class="manual-btn" id="manualBtn"></button>
+  </div>
+
+  <!-- ===================== STAGE WIN OVERLAY ===================== -->
+  <div id="overlay-stage-win" class="overlay hidden">
+    <div class="overlay-card">
+      <div style="font-size:3rem;margin-bottom:8px;">✅</div>
+      <h2 id="stageWinTitle"></h2>
+      <p id="stageWinObject" style="font-size:1.1rem;margin:8px 0 16px;color:#555;"></p>
+      <button class="action-btn" id="nextStageBtn"></button>
     </div>
   </div>
-</div>
 
-<div class="page" id="page-2">
-  <div class="wrap">
-    <div class="reveal">
-      <div class="lt">Metalinės durys</div>
-      <div class="en">METAL DOORS</div>
+  <!-- ===================== FINAL WIN OVERLAY ===================== -->
+  <div id="overlay-win" class="overlay hidden">
+    <div class="overlay-card">
+      <h2 id="winTitle"></h2>
+      <p id="winSubtitle" style="margin-bottom:10px;"></p>
+      <div class="coords" id="winCoords"></div>
+      <button class="action-btn" id="copyBtn"></button>
     </div>
   </div>
+
+  <!-- ===================== LOSS OVERLAY ===================== -->
+  <div id="overlay-loss" class="overlay hidden">
+    <div class="overlay-card loss">
+      <h2 id="lossTitle"></h2>
+      <button class="action-btn" id="retryBtn"></button>
+    </div>
+  </div>
+
+  <!-- ===================== MANUAL CODE OVERLAY ===================== -->
+  <div id="overlay-manual" class="overlay hidden">
+    <div class="overlay-card">
+      <h2 id="manualTitle"></h2>
+      <p id="manualSubtitle"></p>
+      <input type="text" class="code-input" id="manualInput" autocomplete="off" autocapitalize="characters">
+      <div class="error-text" id="manualError"></div>
+      <button class="action-btn" id="manualSubmit"></button>
+      <button class="action-btn" id="manualCancel" style="background:var(--green-dark);"></button>
+    </div>
+  </div>
+
 </div>
+
+<!-- TensorFlow.js + COCO-SSD model (lightweight object detection) -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
 
 <script>
-  const PASSWORD = "TAP ME";
-  const LEN = PASSWORD.length;
+/* =====================================================================
+   ============  GAME CONFIGURATION — EDIT THESE VALUES  ===============
+   ===================================================================== */
 
-  const cellsEl  = document.getElementById('cells');
-  const wrap     = document.getElementById('wrap');
-  const status   = document.getElementById('status');
-  const page1    = document.getElementById('page-1');
-  const page2    = document.getElementById('page-2');
+// --- 1) PUZZLE STAGES — objects to find IN ORDER ---
+// Use exact COCO-SSD class labels. Players must scan each one sequentially.
+const STAGES = [
+  { object: "bench",    en: "bench",    lt: "suoliuką",  de: "Bank"      },
+  { object: "bicycle",  en: "bicycle",  lt: "dviratį",   de: "Fahrrad"   },
+  { object: "car",      en: "car",      lt: "automobilį",de: "Auto"      },
+  { object: "backpack", en: "backpack", lt: "kuprinę",   de: "Rucksack"  },
+  { object: "bottle",   en: "bottle",   lt: "butelį",    de: "Flasche"   }
+];
 
-  let value  = '';
-  let locked = false;
-  const cells = [];
+// --- 2) FINAL COORDINATES (shown + copyable after all 5 found) ---
+const FINAL_COORDINATES = "N 55° 43.123 E 021° 07.456";
 
-  for (let i = 0; i < LEN; i++) {
-    const c = document.createElement('div');
-    c.className = 'cell';
-    cellsEl.appendChild(c);
-    cells.push(c);
+// --- 3) MINIMUM CONFIDENCE THRESHOLD (0.0 - 1.0) ---
+const MIN_CONFIDENCE = 0.6;
+
+// --- 4) TIMER DURATION (in seconds, shared across all stages) ---
+const TIMER_DURATION = 300;
+
+// --- 5) DETECTION FRAME RATE (scans per second, 2–5 recommended) ---
+const DETECTION_FPS = 3;
+
+// --- 6) MANUAL FALLBACK CODE ---
+const MANUAL_CODE = "FOREST42";
+
+/* =====================================================================
+   ============  TRANSLATION STRINGS — EDIT TEXT HERE  =================
+   ===================================================================== */
+const TRANSLATIONS = {
+  en: {
+    instructionPrefix: "Find this object:",
+    instructionSuffix: "scan it to continue!",
+    statusLoading: "Loading model...",
+    statusReady: "Scanning...",
+    statusError: "Could not load AI model (check connection).",
+    manualBtn: "Manual Code",
+    stageTitle: "Object", // "Object 2 of 5"
+    stageOf: "of",
+    stageWinTitle: "Found it!",
+    stageWinNext: "Next Object →",
+    finalWinTitle: "🎉 All Objects Found!",
+    finalWinSubtitle: "Here are your final logbook coordinates:",
+    copyBtn: "Copy Coordinates",
+    copiedBtn: "Copied! ✓",
+    lossTitle: "Time's Up!",
+    retryBtn: "Retry",
+    manualTitle: "Manual Code Entry",
+    manualSubtitle: "Enter the secret code found on the object:",
+    manualSubmit: "Submit",
+    manualCancel: "Cancel",
+    manualError: "Incorrect code. Try again."
+  },
+  lt: {
+    instructionPrefix: "Rask šį objektą:",
+    instructionSuffix: "nuskenuok, kad tęstum!",
+    statusLoading: "Įkeliamas modelis...",
+    statusReady: "Skenuojama...",
+    statusError: "Nepavyko įkelti AI modelio (patikrinkite ryšį).",
+    manualBtn: "Įvesti kodą rankiniu būdu",
+    stageTitle: "Objektas",
+    stageOf: "iš",
+    stageWinTitle: "Radai!",
+    stageWinNext: "Kitas objektas →",
+    finalWinTitle: "🎉 Visi objektai rasti!",
+    finalWinSubtitle: "Štai jūsų finalinės koordinatės:",
+    copyBtn: "Kopijuoti koordinates",
+    copiedBtn: "Nukopijuota! ✓",
+    lossTitle: "Laikas baigėsi!",
+    retryBtn: "Bandyti iš naujo",
+    manualTitle: "Kodo įvedimas",
+    manualSubtitle: "Įveskite slaptą kodą, rastą ant objekto:",
+    manualSubmit: "Patvirtinti",
+    manualCancel: "Atšaukti",
+    manualError: "Neteisingas kodas. Bandykite vėl."
+  },
+  de: {
+    instructionPrefix: "Finde dieses Objekt:",
+    instructionSuffix: "scanne es, um fortzufahren!",
+    statusLoading: "Modell wird geladen...",
+    statusReady: "Suche läuft...",
+    statusError: "AI-Modell konnte nicht geladen werden (Verbindung prüfen).",
+    manualBtn: "Code manuell eingeben",
+    stageTitle: "Objekt",
+    stageOf: "von",
+    stageWinTitle: "Gefunden!",
+    stageWinNext: "Nächstes Objekt →",
+    finalWinTitle: "🎉 Alle Objekte gefunden!",
+    finalWinSubtitle: "Hier sind deine finalen Koordinaten:",
+    copyBtn: "Koordinaten kopieren",
+    copiedBtn: "Kopiert! ✓",
+    lossTitle: "Zeit abgelaufen!",
+    retryBtn: "Erneut versuchen",
+    manualTitle: "Code-Eingabe",
+    manualSubtitle: "Gib den geheimen Code ein, der am Objekt zu finden ist:",
+    manualSubmit: "Bestätigen",
+    manualCancel: "Abbrechen",
+    manualError: "Falscher Code. Versuche es erneut."
   }
+};
 
-  function render() {
-    cells.forEach((c, i) => {
-      c.textContent = value[i] || '';
-      c.className = 'cell';
-      if (i === value.length && value.length < LEN) c.classList.add('active');
+/* =====================================================================
+   ============  APP LOGIC — no need to edit below this line  ==========
+   ===================================================================== */
+
+let currentLang = "en";
+let model = null;
+let videoStream = null;
+let timerInterval = null;
+let detectionInterval = null;
+let timeRemaining = TIMER_DURATION;
+let gameEnded = false;
+let currentStage = 0; // index into STAGES array
+
+// --- Elements ---
+const screenLang = document.getElementById("screen-lang");
+const screenGame = document.getElementById("screen-game");
+const instructionText = document.getElementById("instructionText");
+const timerDisplay = document.getElementById("timerDisplay");
+const statusPill = document.getElementById("statusPill");
+const stageLabel = document.getElementById("stageLabel");
+const stageDots = document.getElementById("stageDots");
+const video = document.getElementById("camera");
+const manualBtn = document.getElementById("manualBtn");
+
+const overlayStageWin = document.getElementById("overlay-stage-win");
+const stageWinTitle = document.getElementById("stageWinTitle");
+const stageWinObject = document.getElementById("stageWinObject");
+const nextStageBtn = document.getElementById("nextStageBtn");
+
+const overlayWin = document.getElementById("overlay-win");
+const winTitle = document.getElementById("winTitle");
+const winSubtitle = document.getElementById("winSubtitle");
+const winCoords = document.getElementById("winCoords");
+const copyBtn = document.getElementById("copyBtn");
+
+const overlayLoss = document.getElementById("overlay-loss");
+const lossTitle = document.getElementById("lossTitle");
+const retryBtn = document.getElementById("retryBtn");
+
+const overlayManual = document.getElementById("overlay-manual");
+const manualTitle = document.getElementById("manualTitle");
+const manualSubtitle = document.getElementById("manualSubtitle");
+const manualInput = document.getElementById("manualInput");
+const manualError = document.getElementById("manualError");
+const manualSubmit = document.getElementById("manualSubmit");
+const manualCancel = document.getElementById("manualCancel");
+
+// --- Language selection ---
+document.querySelectorAll(".lang-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    currentLang = btn.dataset.lang;
+    screenLang.classList.add("hidden");
+    screenGame.classList.remove("hidden");
+    startGame();
+  });
+});
+
+function t() { return TRANSLATIONS[currentLang]; }
+
+function applyTranslations() {
+  const tr = t();
+  const stage = STAGES[currentStage];
+  const objName = stage[currentLang];
+
+  instructionText.innerHTML = `<b>${tr.instructionPrefix}</b> ${objName}, ${tr.instructionSuffix}`;
+  statusPill.textContent = tr.statusLoading;
+  manualBtn.textContent = tr.manualBtn;
+
+  stageLabel.textContent = `${tr.stageTitle} ${currentStage + 1} ${tr.stageOf} ${STAGES.length}`;
+
+  stageWinTitle.textContent = tr.stageWinTitle;
+  stageWinObject.textContent = objName;
+  nextStageBtn.textContent = tr.stageWinNext;
+
+  winTitle.textContent = tr.finalWinTitle;
+  winSubtitle.textContent = tr.finalWinSubtitle;
+  winCoords.textContent = FINAL_COORDINATES;
+  copyBtn.textContent = tr.copyBtn;
+
+  lossTitle.textContent = tr.lossTitle;
+  retryBtn.textContent = tr.retryBtn;
+
+  manualTitle.textContent = tr.manualTitle;
+  manualSubtitle.textContent = tr.manualSubtitle;
+  manualSubmit.textContent = tr.manualSubmit;
+  manualCancel.textContent = tr.manualCancel;
+  manualError.textContent = "";
+}
+
+function renderDots() {
+  stageDots.innerHTML = "";
+  STAGES.forEach((_, i) => {
+    const dot = document.createElement("div");
+    dot.className = "stage-dot" + (i < currentStage ? " done" : i === currentStage ? " active" : "");
+    stageDots.appendChild(dot);
+  });
+}
+
+// --- Game start / reset ---
+async function startGame() {
+  gameEnded = false;
+  currentStage = 0;
+  timeRemaining = TIMER_DURATION;
+  timerDisplay.classList.remove("warning");
+  overlayWin.classList.add("hidden");
+  overlayLoss.classList.add("hidden");
+  overlayStageWin.classList.add("hidden");
+
+  applyTranslations();
+  renderDots();
+  updateTimerDisplay();
+  startTimer();
+  await startCamera();
+  await loadModel();
+}
+
+// --- Advance to next stage (timer keeps running) ---
+function advanceStage() {
+  currentStage++;
+  overlayStageWin.classList.add("hidden");
+  applyTranslations();
+  renderDots();
+  // restart detection for next object
+  startDetectionLoop();
+}
+
+nextStageBtn.addEventListener("click", advanceStage);
+
+// --- Timer (shared across all stages) ---
+function startTimer() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timeRemaining--;
+    updateTimerDisplay();
+    if (timeRemaining <= 30) timerDisplay.classList.add("warning");
+    if (timeRemaining <= 0) endGame("loss");
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(Math.max(timeRemaining, 0) / 60);
+  const s = Math.max(timeRemaining, 0) % 60;
+  timerDisplay.textContent = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+
+// --- Camera ---
+async function startCamera() {
+  try {
+    videoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }, audio: false
     });
+    video.srcObject = videoStream;
+    await video.play();
+  } catch (err) {
+    statusPill.textContent = t().statusError;
+    console.error("Camera error:", err);
   }
+}
 
-  function clearStatus() {
-    status.className = 'status';
-    status.innerHTML = '';
+function stopCamera() {
+  if (videoStream) { videoStream.getTracks().forEach(tr => tr.stop()); videoStream = null; }
+}
+
+// --- AI Model ---
+async function loadModel() {
+  try {
+    model = await cocoSsd.load({ base: "lite_mobilenet_v2" });
+    statusPill.textContent = t().statusReady;
+    startDetectionLoop();
+  } catch (err) {
+    console.error("Model load error:", err);
+    statusPill.textContent = t().statusError;
   }
+}
 
-  function pressKey(key) {
-    if (locked) return;
-    if (key === 'BACKSPACE') {
-      if (value.length > 0) { value = value.slice(0, -1); render(); clearStatus(); }
-      return;
+function startDetectionLoop() {
+  clearInterval(detectionInterval);
+  const intervalMs = 1000 / DETECTION_FPS;
+
+  detectionInterval = setInterval(async () => {
+    if (gameEnded || !model || video.readyState < 2) return;
+    // Don't scan while a stage-win overlay is showing
+    if (!overlayStageWin.classList.contains("hidden")) return;
+
+    try {
+      const predictions = await model.detect(video);
+      const target = STAGES[currentStage].object;
+      const match = predictions.find(p => p.class === target && p.score > MIN_CONFIDENCE);
+      if (match) {
+        clearInterval(detectionInterval);
+        if (currentStage === STAGES.length - 1) {
+          // Last stage — full win
+          endGame("win");
+        } else {
+          // Stage cleared — show intermediate overlay, timer keeps running
+          overlayStageWin.classList.remove("hidden");
+        }
+      }
+    } catch (err) {
+      console.error("Detection error:", err);
     }
-    if (value.length < LEN && /^[A-Z ]$/.test(key)) {
-      value += key;
-      render();
-      clearStatus();
-      if (value.length === LEN) validate();
-    }
+  }, intervalMs);
+}
+
+// --- End game ---
+function endGame(result) {
+  if (gameEnded) return;
+  gameEnded = true;
+  clearInterval(timerInterval);
+  clearInterval(detectionInterval);
+  stopCamera();
+  overlayStageWin.classList.add("hidden");
+  if (result === "win") {
+    overlayWin.classList.remove("hidden");
+  } else {
+    overlayLoss.classList.remove("hidden");
   }
+}
 
-  // keyboard clicks — use pointerdown for instant response
-  document.getElementById('keyboard').addEventListener('pointerdown', (e) => {
-    const key = e.target.closest('[data-key]');
-    if (!key) return;
-    e.preventDefault();
-    const k = key.dataset.key;
-    key.classList.add('pressed');
-    setTimeout(() => key.classList.remove('pressed'), 120);
-    pressKey(k);
-  });
-
-  // also support physical keyboard
-  document.addEventListener('keydown', (e) => {
-    if (locked) return;
-    if (e.key === 'Backspace') { e.preventDefault(); pressKey('BACKSPACE'); return; }
-    if (e.key.length === 1) pressKey(e.key.toUpperCase());
-  });
-
-  function validate() {
-    locked = true;
-    if (value === PASSWORD) {
-      cells.forEach((c, i) => setTimeout(() => c.className = 'cell success', i * 80));
-      setTimeout(() => {
-        page1.classList.add('out');
-        page2.classList.add('in');
-      }, LEN * 80 + 350);
-    } else {
-      cells.forEach(c => c.classList.add('error'));
-      wrap.classList.add('shake');
-      status.className = 'status err';
-      status.innerHTML = '<div class="lt">Neteisingas slaptažodis</div><div class="en">INCORRECT PASSWORD</div>';
-      setTimeout(() => {
-        value = '';
-        cells.forEach(c => c.className = 'cell');
-        wrap.classList.remove('shake');
-        render();
-        clearStatus();
-        locked = false;
-      }, 1200);
-    }
+// --- Copy coordinates ---
+copyBtn.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(FINAL_COORDINATES);
+    copyBtn.textContent = t().copiedBtn;
+    setTimeout(() => { copyBtn.textContent = t().copyBtn; }, 2500);
+  } catch {
+    // Fallback: select the coords text visually
+    const range = document.createRange();
+    range.selectNode(winCoords);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
   }
+});
 
-  render();
+// --- Retry ---
+retryBtn.addEventListener("click", () => {
+  overlayLoss.classList.add("hidden");
+  startGame();
+});
+
+// --- Manual code fallback ---
+manualBtn.addEventListener("click", () => {
+  manualInput.value = "";
+  manualError.textContent = "";
+  overlayManual.classList.remove("hidden");
+});
+manualCancel.addEventListener("click", () => { overlayManual.classList.add("hidden"); });
+manualSubmit.addEventListener("click", () => {
+  if (manualInput.value.trim().toUpperCase() === MANUAL_CODE.toUpperCase()) {
+    overlayManual.classList.add("hidden");
+    endGame("win");
+  } else {
+    manualError.textContent = t().manualError;
+  }
+});
 </script>
 </body>
 </html>
