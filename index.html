@@ -453,7 +453,14 @@ async function callRoboflow(b64){
       body:JSON.stringify({api_key:ROBOFLOW_KEY,inputs:{"image":{"type":"base64","value":b64}}}),
       signal: controller.signal
     });
-    if(!resp.ok) throw new Error("HTTP "+resp.status);
+    if(!resp.ok){
+      // DEBUG: surface the real response body so we can see *why* it's failing
+      // (bad key, wrong workflow path, etc.) instead of a generic status code.
+      let bodyText = "";
+      try{ bodyText = await resp.text(); }catch(_){}
+      console.error("Roboflow error response:", resp.status, bodyText);
+      throw new Error("HTTP "+resp.status+": "+bodyText.slice(0,200));
+    }
     return resp.json();
   } finally {
     clearTimeout(timeoutId);
