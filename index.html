@@ -144,6 +144,16 @@ const CONFIDENCE_THRESHOLD = 0.40;
 const CONFIRM_HITS         = 3;
 const SCAN_INTERVAL_MS     = 1500;
 const ERROR_BACKOFF_MS     = 5000;
+// FIX: requests could hang forever with no feedback (looked "stuck at connecting").
+// Abort and treat as a failure if the API hasn't responded within this window.
+const REQUEST_TIMEOUT_MS      = 12000;
+// FIX: a single flaky/dropped request was instantly flashing the alarming
+// "retrying" status, causing fast flicker between normal and error states.
+// Only treat it as a real connection problem after this many *consecutive* failures.
+const ERROR_DISPLAY_THRESHOLD = 2;
+// FIX: isolated blips (below the threshold above) retry quickly and quietly,
+// without touching the visible status at all.
+const QUICK_RETRY_MS          = 1200;
 const STAGES = [
   { object:"bench",     en:"bench",      lt:"suoliuk\u0105"   },
   { object:"rock",      en:"rock",       lt:"akmen\u012f"     },
@@ -182,6 +192,8 @@ const T = {
     manualError:"Wrong code. Try again.",
     modelLoading:"Connecting to detector…",
     modelReady:"⚡ Detector ready — timer started!",
+    // FIX: shown after repeated pre-ready failures so "stuck" actually communicates what's happening
+    modelStruggling:"Still trying to connect — check your signal…",
   },
   lt:{
     instructionPrefix:"Rask ir nukreipk kamer\u0105 \u012f:",
@@ -212,6 +224,8 @@ const T = {
     manualError:"Neteisingas kodas. Bandyk dar.",
     modelLoading:"Jungiamasi prie aptiktuvo…",
     modelReady:"⚡ Aptiktuvas paruoštas — laikmatis paleistas!",
+    // FIX: shown after repeated pre-ready failures so "stuck" actually communicates what's happening
+    modelStruggling:"Nepavyksta prisijungti — patikrink interneto ryšį…",
   }
 };
 
@@ -229,7 +243,8 @@ let lastPreds     = [];
 let timerStarted  = false;
 let modelReady    = false;
 let bannerIv      = null;
-let isErrorState  = false;  // FIX: track error state to prevent status flicker
+let isErrorState  = false;  // true only once we're in a *sustained* failure run (>= threshold)
+let consecutiveErrors = 0;  // FIX: counts back-to-back failures so single blips don't trigger the error UI
 
 /* ELEMENTS */
 const $= id=>document.getElementById(id);
@@ -284,14 +299,14 @@ document.querySelectorAll(".lang-btn").forEach(btn=>{
 /* UI */
 function applyUI(){
   const L=tr(), s=STAGES[stage];
-  if(!s) return;  // FIX: guard against out-of-bounds stage
+  if(!s) return;  // guard against out-of-bounds stage
   const obj=s[lang]||s.en;
   elInstruction.innerHTML=`<b>${L.instructionPrefix}</b> <span style="color:var(--yellow);font-weight:800;">${obj}</span><br><span style="font-size:.85rem;color:#aaa;">${L.instructionSuffix}</span>`;
   elManualBtn.textContent     = L.manualBtn;
   elScanBtnLabel.textContent  = L.scanBtn;
   elStageLabel.textContent    = `${L.stageTitle} ${stage+1} ${L.stageOf} ${STAGES.length}`;
   elStageWinTitle.textContent = L.stageWinTitle;
-  elStageWinDesc.textContent  = `${L.stageWinFound} ${obj}`;  // FIX: add context label so it reads as a sentence
+  elStageWinDesc.textContent  = `${L.stageWinFound} ${obj}`;  // add context label so it reads as a sentence
   elNextStageBtn.textContent  = L.stageWinNext;
   elWinTitle.textContent      = L.winTitle;
   elWinSubtitle.textContent   = L.winSubtitle;
@@ -325,7 +340,8 @@ function setStatus(key,cls){
 /* GAME */
 async function startGame(){
   gameEnded=false; stage=0; timeLeft=TIMER_DURATION;
-  hitCount=0; timerStarted=false; modelReady=false; isErrorState=false;  // FIX: reset error state
+  hitCount=0; timerStarted=false; modelReady=false; isErrorState=false;
+  consecutiveErrors=0;  // FIX: reset failure streak on (re)start
   clearTimeout(scanTimeout); clearInterval(timerInterval); clearInterval(bannerIv);
   elTimer.classList.remove("warning");
   ["overlay-win","overlay-loss","overlay-stage-win"].forEach(id=>$(id).classList.add("hidden"));
@@ -338,9 +354,10 @@ async function startGame(){
 }
 
 function advanceStage(){
-  // FIX: guard against advancing past the last stage (e.g. double-tap)
+  // guard against advancing past the last stage (e.g. double-tap)
   if(stage >= STAGES.length - 1) return;
-  stage++; hitCount=0; isErrorState=false;  // FIX: reset error state on stage advance
+  stage++; hitCount=0; isErrorState=false;
+  consecutiveErrors=0;  // FIX: reset failure streak on stage advance
   elStageWin.classList.add("hidden");
   applyUI();
   setStatus("statusReady","ready");
@@ -379,13 +396,13 @@ function stopCamera(){
   if(videoStream){videoStream.getTracks().forEach(t=>t.stop());videoStream=null;}
 }
 
-// FIX: stop camera on page unload to release camera indicator on mobile browsers
+// stop camera on page unload to release camera indicator on mobile browsers
 window.addEventListener("pagehide", stopCamera);
 
 /* FRAME CAPTURE */
 function captureBase64(){
   const w=elVideo.videoWidth, h=elVideo.videoHeight;
-  // FIX: bail out if video not ready — avoids sending a blank black frame to the API
+  // bail out if video not ready — avoids sending a blank black frame to the API
   if(!w || !h) return null;
   const c=document.createElement("canvas");
   c.width=w; c.height=h;
@@ -415,15 +432,32 @@ function markModelReady(){
   setTimeout(()=>elModelBanner.classList.add("hidden"),1500);
 }
 
+// FIX: while we're still waiting for the very first successful response,
+// repeated failures now update the banner text instead of sitting frozen
+// on "Connecting…" forever with no explanation.
+function updateStruggleBanner(){
+  if(modelReady) return;
+  elModelTxt.textContent = tr().modelStruggling;
+}
+
 /* ROBOFLOW */
 async function callRoboflow(b64){
-  const resp=await fetch(ROBOFLOW_URL,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({api_key:ROBOFLOW_KEY,inputs:{"image":{"type":"base64","value":b64}}})
-  });
-  if(!resp.ok) throw new Error("HTTP "+resp.status);
-  return resp.json();
+  // FIX: abort the request if it hangs instead of waiting on it indefinitely —
+  // this was the main cause of the UI appearing permanently "stuck".
+  const controller = new AbortController();
+  const timeoutId  = setTimeout(()=>controller.abort(), REQUEST_TIMEOUT_MS);
+  try{
+    const resp=await fetch(ROBOFLOW_URL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({api_key:ROBOFLOW_KEY,inputs:{"image":{"type":"base64","value":b64}}}),
+      signal: controller.signal
+    });
+    if(!resp.ok) throw new Error("HTTP "+resp.status);
+    return resp.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 function extractPredictions(data){
@@ -443,11 +477,11 @@ async function runScan(){
   if(gameEnded) return;
   if(!elStageWin.classList.contains("hidden")){ scheduleNextScan(500); return; }
 
-  // FIX: only show "scanning" status if we're not in an error/retrying state
-  // — prevents the "Skenuojama ↔ Klaida" flicker during backoff
+  // only show "scanning" status if we're not in a sustained error/retrying state
+  // — prevents flicker during backoff
   if(!isErrorState) setStatus("statusScanning","sending");
 
-  // FIX: skip API call if video frame not ready yet
+  // skip API call if video frame not ready yet
   const b64 = captureBase64();
   if(!b64){ scheduleNextScan(SCAN_INTERVAL_MS); return; }
 
@@ -456,8 +490,9 @@ async function runScan(){
     const preds = extractPredictions(data);
     lastPreds   = preds;
 
-    // FIX: clear error state on first successful response
+    // success — clear any failure streak
     isErrorState = false;
+    consecutiveErrors = 0;  // FIX: reset streak so the next isolated blip doesn't immediately count as "2 in a row"
 
     markModelReady();
     startTimer();
@@ -475,17 +510,28 @@ async function runScan(){
       }
     } else {
       if(hitCount>0) hitCount=Math.max(0,hitCount-1);
-      // FIX: only show "wrong" when something was detected but not the target;
+      // only show "wrong" when something was detected but not the target;
       // show "ready" when nothing at all was detected
       setStatus(preds.length?"statusWrong":"statusReady", preds.length?"error":"ready");
     }
     scheduleNextScan(SCAN_INTERVAL_MS);
   } catch(e){
     console.error("Roboflow:",e);
-    // FIX: set error state so the next scheduled scan doesn't flash "scanning"
-    isErrorState = true;
-    setStatus("statusRetrying","error");
-    scheduleNextScan(ERROR_BACKOFF_MS);
+    consecutiveErrors++;
+    // FIX: this is the core fix for the flicker bug. A single dropped/slow
+    // request used to immediately flash the alarming "retrying" status, which
+    // — on a flaky connection — produced rapid success/error/success/error
+    // flicker. Now we only switch into the visible "retrying" state once
+    // failures are sustained (consecutive), and isolated blips just retry
+    // quickly in the background with no visible change at all.
+    if(consecutiveErrors >= ERROR_DISPLAY_THRESHOLD){
+      isErrorState = true;
+      setStatus("statusRetrying","error");
+      updateStruggleBanner();  // also clarifies the "stuck connecting" banner
+      scheduleNextScan(ERROR_BACKOFF_MS);
+    } else {
+      scheduleNextScan(QUICK_RETRY_MS);
+    }
   }
 }
 
@@ -534,7 +580,7 @@ elCopyBtn.addEventListener("click",async()=>{
     elCopyBtn.textContent=tr().copiedBtn;
     setTimeout(()=>elCopyBtn.textContent=tr().copyBtn,2500);
   } catch{
-    // FIX: fallback selection for browsers without clipboard API
+    // fallback selection for browsers without clipboard API
     const r=document.createRange();
     r.selectNode(elWinCoords);
     window.getSelection().removeAllRanges();
@@ -553,7 +599,7 @@ elManualBtn.addEventListener("click",()=>{
 });
 elManualCancel.addEventListener("click",()=>elManualOverlay.classList.add("hidden"));
 
-// FIX: also allow submitting with Enter key
+// also allow submitting with Enter key
 elManualInput.addEventListener("keydown",(e)=>{ if(e.key==="Enter") elManualSubmit.click(); });
 
 elManualSubmit.addEventListener("click",()=>{
