@@ -412,7 +412,14 @@ function captureBase64(){
   const c=document.createElement("canvas");
   c.width=w; c.height=h;
   c.getContext("2d").drawImage(elVideo,0,0);
-  return c.toDataURL("image/jpeg",0.8).split(",")[1];
+  const dataUrl = c.toDataURL("image/jpeg",0.8);
+  // DEBUG: log frame dimensions and a way to view the actual captured image,
+  // so we can confirm the camera frame looks correct before it's sent out.
+  if(debugMode){
+    console.log("Captured frame:", w+"x"+h, "size(b64 chars):", dataUrl.length);
+    console.log("Paste this in a new browser tab to view the captured frame:", dataUrl);
+  }
+  return dataUrl.split(",")[1];
 }
 
 /* MODEL BANNER — animates while waiting, only completes on first success */
