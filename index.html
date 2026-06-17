@@ -3,116 +3,148 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Geocache Field Puzzle</title>
+<title>⚡ High Voltage Cache</title>
 <style>
-  :root{--green:#4A752C;--green-dark:#395a21;--bg:#F5F3EE;--text:#1C1C1C;--danger:#A33;}
+  :root{
+    --yellow:#FFD600;
+    --yellow-dark:#c9a800;
+    --black:#0a0a0a;
+    --dark:#111;
+    --dark2:#1a1a1a;
+    --danger:#ff3333;
+    --text:#fff;
+  }
   *{box-sizing:border-box;margin:0;padding:0;}
-  html,body{height:100%;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--green);color:#fff;}
+  html,body{height:100%;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:var(--black);color:var(--text);}
   #app{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px;}
-  .screen{width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:16px;animation:fadeIn .35s ease;}
+  .screen{width:100%;max-width:480px;display:flex;flex-direction:column;align-items:center;gap:14px;animation:fadeIn .35s ease;}
   .hidden{display:none !important;}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-  .lang-title{font-size:1.6rem;font-weight:700;color:#fff;text-align:center;margin-top:40px;}
-  .lang-btn{width:100%;padding:18px;font-size:1.2rem;font-weight:700;border:none;border-radius:12px;background:#fff;color:var(--green-dark);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 2px 6px rgba(0,0,0,.25);}
-  .lang-btn:active{background:var(--bg);}
-  .flag{font-size:1.4rem;}
-  .instruction{font-size:1.1rem;line-height:1.4;text-align:center;background:#fff;border:2px solid var(--green-dark);border-radius:12px;padding:12px 14px;width:100%;color:var(--text);}
-  .instruction b{color:var(--green-dark);}
-  .timer{font-size:2.6rem;font-weight:800;color:var(--green-dark);background:#fff;border:3px solid #fff;border-radius:14px;padding:6px 28px;letter-spacing:2px;}
-  .timer.warning{color:var(--danger);border-color:var(--danger);}
-  .camera-wrap{position:relative;width:100%;aspect-ratio:3/4;background:#000;border-radius:16px;overflow:hidden;border:3px solid #fff;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+  /* LANG SCREEN */
+  .lang-header{text-align:center;margin-top:32px;}
+  .bolt{font-size:4rem;display:block;animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{text-shadow:0 0 10px #FFD600,0 0 30px #FFD600;}50%{text-shadow:0 0 4px #FFD600;}}
+  .lang-title{font-size:1.5rem;font-weight:800;color:var(--yellow);margin-top:8px;letter-spacing:1px;}
+  .lang-subtitle{font-size:.9rem;color:#888;margin-top:4px;}
+  .lang-btn{width:100%;padding:16px;font-size:1.1rem;font-weight:700;border:2px solid var(--yellow);border-radius:12px;background:transparent;color:var(--yellow);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:background .2s;}
+  .lang-btn:active{background:rgba(255,214,0,.1);}
+  .flag{font-size:1.3rem;}
+
+  /* INSTRUCTION */
+  .instruction{font-size:1rem;line-height:1.5;text-align:center;background:var(--dark2);border:2px solid var(--yellow);border-radius:12px;padding:12px 14px;width:100%;color:#eee;}
+  .instruction b{color:var(--yellow);}
+
+  /* TIMER */
+  .timer-row{display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px;}
+  .timer{font-size:2.4rem;font-weight:800;color:var(--yellow);background:var(--dark2);border:2px solid var(--yellow);border-radius:12px;padding:6px 22px;letter-spacing:3px;font-variant-numeric:tabular-nums;}
+  .timer.warning{color:var(--danger);border-color:var(--danger);animation:flicker .4s infinite;}
+  @keyframes flicker{0%,100%{opacity:1;}50%{opacity:.6;}}
+  .stage-info{flex:1;text-align:right;}
+  .stage-label{font-size:.8rem;font-weight:700;color:#888;margin-bottom:4px;}
+  .stage-dots{display:flex;gap:5px;justify-content:flex-end;}
+  .dot{width:16px;height:16px;border-radius:50%;background:var(--dark2);border:2px solid #444;transition:all .3s;}
+  .dot.done{background:var(--yellow);border-color:var(--yellow);}
+  .dot.active{background:rgba(255,214,0,.4);border-color:var(--yellow);}
+
+  /* CAMERA */
+  .camera-wrap{position:relative;width:100%;aspect-ratio:3/4;background:#000;border-radius:16px;overflow:hidden;border:2px solid var(--yellow);}
   video{width:100%;height:100%;object-fit:cover;}
-  canvas#snap{display:none;}
-  .status-pill{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;padding:6px 14px;border-radius:20px;font-size:.85rem;font-weight:600;white-space:nowrap;}
-  .status-pill.ready{background:rgba(74,117,44,.85);}
-  .status-pill.sending{background:rgba(0,70,160,.75);}
-  .status-pill.error{background:rgba(160,50,50,.85);}
+  .status-pill{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;padding:6px 16px;border-radius:20px;font-size:.85rem;font-weight:600;white-space:nowrap;border:1px solid #333;}
+  .status-pill.ready{border-color:var(--yellow);color:var(--yellow);}
+  .status-pill.sending{border-color:#4fc;color:#4fc;}
+  .status-pill.error{border-color:var(--danger);color:var(--danger);}
+  .status-pill.success{border-color:#4f4;color:#4f4;}
 
-  /* Debug overlay */
-  #debugOverlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
-  #debugList{position:absolute;top:8px;left:8px;right:8px;display:flex;flex-direction:column;gap:4px;}
-  .debug-tag{background:rgba(0,0,0,.72);color:#fff;font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;width:fit-content;}
-  .debug-tag.highlight{background:rgba(74,117,44,.9);color:#fff;}
+  /* DEBUG */
+  #debugList{position:absolute;top:8px;left:8px;right:8px;display:flex;flex-direction:column;gap:3px;pointer-events:none;}
+  .dtag{background:rgba(0,0,0,.8);color:#ccc;font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px;width:fit-content;}
+  .dtag.hit{background:rgba(255,214,0,.85);color:#000;}
+  .debug-btn{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);border:1px solid #444;color:#aaa;font-size:11px;font-weight:700;padding:5px 8px;border-radius:7px;cursor:pointer;}
 
-  /* Debug toggle */
-  .debug-toggle{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);border:none;color:#fff;font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;cursor:pointer;z-index:10;}
+  /* BUTTONS */
+  .scan-btn{width:100%;padding:16px;font-size:1.15rem;font-weight:800;border:none;border-radius:12px;background:var(--yellow);color:#000;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.5px;}
+  .scan-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .scan-btn:active:not(:disabled){background:var(--yellow-dark);}
+  .manual-btn{background:none;border:none;color:#666;text-decoration:underline;font-size:.85rem;cursor:pointer;}
 
-  .scan-btn{width:100%;padding:15px;font-size:1.15rem;font-weight:700;border:none;border-radius:12px;background:#fff;color:var(--green-dark);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 6px rgba(0,0,0,.25);}
-  .scan-btn:disabled{opacity:.5;cursor:not-allowed;}
-  .scan-btn:active:not(:disabled){background:var(--bg);}
-  .manual-btn{background:none;border:none;color:#fff;text-decoration:underline;font-size:.9rem;cursor:pointer;}
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;}
-  .overlay-card{background:#fff;border-radius:16px;padding:28px 22px;text-align:center;max-width:420px;width:100%;box-shadow:0 6px 24px rgba(0,0,0,.25);}
-  .overlay-card h2{color:var(--green-dark);font-size:1.6rem;margin-bottom:10px;}
-  .overlay-card.loss h2{color:var(--danger);}
-  .coords{font-size:1.3rem;font-weight:800;background:var(--bg);border:2px dashed var(--green);border-radius:10px;padding:14px;margin:10px 0;word-break:break-word;color:var(--text);letter-spacing:1px;}
-  .stage-dot{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,0.35);border:2px solid #fff;transition:background .3s;}
-  .stage-dot.done{background:#fff;}
-  .stage-dot.active{background:rgba(255,255,255,0.7);}
-  .action-btn{width:100%;padding:14px;font-size:1.1rem;font-weight:700;border:none;border-radius:10px;background:var(--green);color:#fff;cursor:pointer;margin-top:8px;}
-  .action-btn:active{background:var(--green-dark);}
-  input.code-input{width:100%;padding:12px;font-size:1.1rem;border:2px solid var(--green);border-radius:10px;text-align:center;margin:10px 0;color:var(--text);background:#fff;}
-  .error-text{color:var(--danger);font-size:.9rem;min-height:1.2em;}
+  /* MODEL BANNER */
+  #modelBanner{width:100%;background:var(--dark2);border:1px solid #333;border-radius:10px;padding:10px 14px;font-size:.9rem;text-align:center;color:#aaa;}
+  #modelBar{height:5px;background:#222;border-radius:3px;margin-top:6px;}
+  #modelFill{height:100%;width:0%;background:var(--yellow);border-radius:3px;transition:width .3s;}
 
-  /* Loading model banner */
-  #modelBanner{width:100%;background:rgba(0,0,0,.35);border-radius:10px;padding:10px 14px;font-size:.9rem;text-align:center;color:#fff;}
-  #modelBar{height:6px;background:rgba(255,255,255,.2);border-radius:3px;margin-top:6px;overflow:hidden;}
-  #modelFill{height:100%;width:0%;background:#fff;border-radius:3px;transition:width .3s;}
+  /* OVERLAYS */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;}
+  .card{background:var(--dark2);border:2px solid var(--yellow);border-radius:16px;padding:28px 22px;text-align:center;max-width:420px;width:100%;}
+  .card h2{color:var(--yellow);font-size:1.5rem;margin-bottom:8px;}
+  .card.loss{border-color:var(--danger);}
+  .card.loss h2{color:var(--danger);}
+  .coords{font-size:1.2rem;font-weight:800;background:#000;border:2px dashed var(--yellow);border-radius:10px;padding:14px;margin:12px 0;word-break:break-word;color:var(--yellow);letter-spacing:1px;}
+  .action-btn{width:100%;padding:14px;font-size:1rem;font-weight:700;border:none;border-radius:10px;background:var(--yellow);color:#000;cursor:pointer;margin-top:10px;}
+  .action-btn:active{background:var(--yellow-dark);}
+  .action-btn.dark{background:#222;color:#aaa;border:1px solid #444;}
+  input.code-input{width:100%;padding:12px;font-size:1.1rem;border:2px solid var(--yellow);border-radius:10px;text-align:center;margin:10px 0;color:#fff;background:#000;}
+  .error-text{color:var(--danger);font-size:.85rem;min-height:1.2em;}
+
+  /* ELECTRIC DECORATION */
+  .zap{color:var(--yellow);font-size:1.2rem;}
 </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- LANGUAGE SELECT -->
+  <!-- LANG -->
   <div id="screen-lang" class="screen">
-    <div class="lang-title">Select your language / Pasirinkite kalbą / Sprache wählen</div>
+    <div class="lang-header">
+      <span class="bolt">⚡</span>
+      <div class="lang-title">HIGH VOLTAGE CACHE</div>
+      <div class="lang-subtitle">Select language / Pasirinkite kalbą</div>
+    </div>
     <button class="lang-btn" data-lang="en"><span class="flag">🇬🇧</span> English</button>
     <button class="lang-btn" data-lang="lt"><span class="flag">🇱🇹</span> Lietuvių</button>
-    <button class="lang-btn" data-lang="de"><span class="flag">🇩🇪</span> Deutsch</button>
   </div>
 
-  <!-- MAIN GAME -->
+  <!-- GAME -->
   <div id="screen-game" class="screen hidden">
+    <div style="font-size:1.3rem;font-weight:800;color:var(--yellow);letter-spacing:2px;">⚡ HIGH VOLTAGE CACHE</div>
     <div id="modelBanner">
-      Loading object detector… <span id="modelPct">0%</span>
+      <span id="modelTxt">Initializing…</span>
       <div id="modelBar"><div id="modelFill"></div></div>
     </div>
     <div class="instruction" id="instructionText"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px;">
+    <div class="timer-row">
       <div class="timer" id="timerDisplay">05:00</div>
-      <div id="progressWrap" style="flex:1;text-align:right;">
-        <div id="stageLabel" style="font-size:.85rem;font-weight:700;color:#fff;margin-bottom:4px;"></div>
-        <div style="display:flex;gap:5px;justify-content:flex-end;" id="stageDots"></div>
+      <div class="stage-info">
+        <div class="stage-label" id="stageLabel"></div>
+        <div class="stage-dots" id="stageDots"></div>
       </div>
     </div>
     <div class="camera-wrap">
       <video id="camera" playsinline autoplay muted></video>
-      <canvas id="snap"></canvas>
-      <div id="debugOverlay">
-        <div id="debugList"></div>
-      </div>
-      <button class="debug-toggle" id="debugToggle">🔍 Debug OFF</button>
-      <div class="status-pill" id="statusPill">Loading model…</div>
+      <div id="debugList"></div>
+      <button class="debug-btn" id="debugToggle">🔍 OFF</button>
+      <div class="status-pill" id="statusPill">⚡ Starting…</div>
     </div>
-    <button class="scan-btn" id="scanBtn" disabled>📷 <span id="scanBtnLabel">Scan Object</span></button>
+    <button class="scan-btn" id="scanBtn" disabled>⚡ <span id="scanBtnLabel">Scan</span></button>
     <button class="manual-btn" id="manualBtn"></button>
   </div>
 
   <!-- STAGE WIN -->
   <div id="overlay-stage-win" class="overlay hidden">
-    <div class="overlay-card">
-      <div style="font-size:3rem;margin-bottom:8px;">✅</div>
+    <div class="card">
+      <div style="font-size:3rem;">⚡✅</div>
       <h2 id="stageWinTitle"></h2>
-      <p id="stageWinObject" style="font-size:1.1rem;margin:8px 0 16px;color:#555;"></p>
+      <p id="stageWinDesc" style="color:#aaa;margin:8px 0 16px;font-size:1rem;"></p>
       <button class="action-btn" id="nextStageBtn"></button>
     </div>
   </div>
 
   <!-- FINAL WIN -->
   <div id="overlay-win" class="overlay hidden">
-    <div class="overlay-card">
+    <div class="card">
+      <div style="font-size:2.5rem;margin-bottom:6px;">⚡🏆⚡</div>
       <h2 id="winTitle"></h2>
-      <p id="winSubtitle" style="margin-bottom:10px;"></p>
+      <p id="winSubtitle" style="color:#aaa;margin-bottom:6px;"></p>
       <div class="coords" id="winCoords"></div>
       <button class="action-btn" id="copyBtn"></button>
     </div>
@@ -120,413 +152,480 @@
 
   <!-- LOSS -->
   <div id="overlay-loss" class="overlay hidden">
-    <div class="overlay-card loss">
+    <div class="card loss">
+      <div style="font-size:2.5rem;margin-bottom:6px;">💀</div>
       <h2 id="lossTitle"></h2>
+      <p style="color:#888;margin-bottom:8px;" id="lossSubtitle"></p>
       <button class="action-btn" id="retryBtn"></button>
     </div>
   </div>
 
-  <!-- MANUAL CODE -->
+  <!-- MANUAL -->
   <div id="overlay-manual" class="overlay hidden">
-    <div class="overlay-card">
+    <div class="card">
       <h2 id="manualTitle"></h2>
-      <p id="manualSubtitle"></p>
+      <p id="manualSubtitle" style="color:#aaa;margin-bottom:6px;font-size:.9rem;"></p>
       <input type="text" class="code-input" id="manualInput" autocomplete="off" autocapitalize="characters">
       <div class="error-text" id="manualError"></div>
       <button class="action-btn" id="manualSubmit"></button>
-      <button class="action-btn" id="manualCancel" style="background:var(--green-dark);"></button>
+      <button class="action-btn dark" id="manualCancel"></button>
     </div>
   </div>
 
 </div>
-
-<!-- TensorFlow.js + COCO-SSD (free, runs in browser) -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
-
 <script>
-/* =================================================================
-   CONFIGURATION — edit these values
-   ================================================================= */
+/* ================================================================
+   CONFIG
+================================================================ */
+const ROBOFLOW_URL = "https://detect.roboflow.com/infer/workflows/deimax-s-workspace/find-tree-rock-and-more";
+const ROBOFLOW_KEY = "kOx9rfH2ZRLrbzgKezKO";
+const FINAL_COORDS = "N 55° 42.566 E 21° 08.396";
+const TIMER_DURATION = 300;
+const MANUAL_CODE = "VOLTAGE42";
+const CONFIDENCE_THRESHOLD = 0.40;
+// consecutive confident detections needed to confirm
+const CONFIRM_HITS = 3;
+const SCAN_INTERVAL_MS = 1200;
+
 const STAGES = [
-  { object:"bench",    en:"bench",     lt:"suoliuką",   de:"Bank"     },
-  { object:"bicycle",  en:"bicycle",   lt:"dviratį",    de:"Fahrrad"  },
-  { object:"car",      en:"car",       lt:"automobilį", de:"Auto"     },
-  { object:"backpack", en:"backpack",  lt:"kuprinę",    de:"Rucksack" },
-  { object:"bottle",   en:"bottle",    lt:"butelį",     de:"Flasche"  }
+  { object:"bench",    en:"bench",     lt:"suoliuką"   },
+  { object:"rock",     en:"rock",      lt:"akmenį"     },
+  { object:"tree",     en:"tree",      lt:"medį"       },
+  { object:"car",      en:"car",       lt:"automobilį" },
+  { object:"lamp post",en:"lamp post", lt:"žibinto stulpą"    },
+  { object:"sign",     en:"sign",      lt:"ženklą"     },
 ];
-const FINAL_COORDINATES = "N 55° 43.123 E 021° 07.456";
-const TIMER_DURATION    = 300;
-const MANUAL_CODE       = "FOREST42";
 
-// Confidence threshold — low to catch benches/photos shown to camera
-const CONFIDENCE_THRESHOLD = 0.15;
-
-// How many frames to sample per scan attempt
-const SCAN_FRAMES = 4;
-const FRAME_DELAY_MS = 400;
-
-// Synonyms: what COCO-SSD might call each object
-const SYNONYMS = {
-  bench:    ["bench", "chair", "couch", "sofa"],
-  bicycle:  ["bicycle", "bike"],
-  car:      ["car", "truck", "vehicle", "bus", "motorcycle"],
-  backpack: ["backpack", "handbag", "suitcase", "bag"],
-  bottle:   ["bottle", "cup", "wine glass", "vase"],
-};
-
-/* =================================================================
+/* ================================================================
    TRANSLATIONS
-   ================================================================= */
+================================================================ */
 const T = {
-  en:{instructionPrefix:"Find this object:",instructionSuffix:"point your camera at it and tap Scan!",statusReady:"Camera ready — tap Scan",statusSending:"Scanning…",statusWrong:"Not found — try again",statusError:"Model error — try again",scanBtn:"Scan Object",manualBtn:"Manual Code",stageTitle:"Object",stageOf:"of",stageWinTitle:"Found it!",stageWinNext:"Next Object →",finalWinTitle:"🎉 All Objects Found!",finalWinSubtitle:"Here are your final logbook coordinates:",copyBtn:"Copy Coordinates",copiedBtn:"Copied! ✓",lossTitle:"Time's Up!",retryBtn:"Retry",manualTitle:"Manual Code Entry",manualSubtitle:"Enter the secret code found on the object:",manualSubmit:"Submit",manualCancel:"Cancel",manualError:"Incorrect code. Try again.",modelLoading:"Loading AI detector…",modelReady:"AI ready — tap Scan"},
-  lt:{instructionPrefix:"Rask šį objektą:",instructionSuffix:"nukreipk kamerą ir spustelėk Skenuoti!",statusReady:"Kamera paruošta — spustelėk Skenuoti",statusSending:"Skenuojama…",statusWrong:"Nerasta — bandyk dar",statusError:"Klaida — bandyk dar",scanBtn:"Skenuoti",manualBtn:"Įvesti kodą rankiniu būdu",stageTitle:"Objektas",stageOf:"iš",stageWinTitle:"Radai!",stageWinNext:"Kitas objektas →",finalWinTitle:"🎉 Visi objektai rasti!",finalWinSubtitle:"Štai jūsų finalinės koordinatės:",copyBtn:"Kopijuoti koordinates",copiedBtn:"Nukopijuota! ✓",lossTitle:"Laikas baigėsi!",retryBtn:"Bandyti iš naujo",manualTitle:"Kodo įvedimas",manualSubtitle:"Įveskite slaptą kodą, rastą ant objekto:",manualSubmit:"Patvirtinti",manualCancel:"Atšaukti",manualError:"Neteisingas kodas. Bandykite vėl.",modelLoading:"Kraunamas AI…",modelReady:"AI paruoštas — spustelėk Skenuoti"},
-  de:{instructionPrefix:"Finde dieses Objekt:",instructionSuffix:"richte die Kamera darauf und tippe Scan!",statusReady:"Kamera bereit — tippe Scan",statusSending:"Analysiere…",statusWrong:"Nicht gefunden — nochmal",statusError:"Fehler — nochmal versuchen",scanBtn:"Scannen",manualBtn:"Code manuell eingeben",stageTitle:"Objekt",stageOf:"von",stageWinTitle:"Gefunden!",stageWinNext:"Nächstes Objekt →",finalWinTitle:"🎉 Alle Objekte gefunden!",finalWinSubtitle:"Hier sind deine finalen Koordinaten:",copyBtn:"Koordinaten kopieren",copiedBtn:"Kopiert! ✓",lossTitle:"Zeit abgelaufen!",retryBtn:"Erneut versuchen",manualTitle:"Code-Eingabe",manualSubtitle:"Gib den geheimen Code ein, der am Objekt zu finden ist:",manualSubmit:"Bestätigen",manualCancel:"Abbrechen",manualError:"Falscher Code. Versuche es erneut.",modelLoading:"KI wird geladen…",modelReady:"KI bereit — tippe Scan"}
+  en:{
+    instructionPrefix:"Find and point at:",
+    instructionSuffix:"Hold steady — it detects automatically!",
+    statusReady:"⚡ Ready — point at object",
+    statusScanning:"🔍 Scanning…",
+    statusWrong:"Not detected — keep trying",
+    statusError:"API error — try again",
+    statusSuccess:"✅ Detected!",
+    scanBtn:"⚡ Scan",
+    manualBtn:"Enter manual code",
+    stageTitle:"Stage",stageOf:"of",
+    stageWinTitle:"Charged! ⚡",
+    stageWinNext:"Next Stage →",
+    winTitle:"FULLY CHARGED! ⚡",
+    winSubtitle:"You completed the High Voltage Cache! Final coordinates:",
+    copyBtn:"Copy Coordinates",
+    copiedBtn:"Copied! ✓",
+    lossTitle:"Power Cut! 💀",
+    lossSubtitle:"The voltage dropped to zero. Try again?",
+    retryBtn:"Reconnect ⚡",
+    manualTitle:"Manual Override",
+    manualSubtitle:"Enter the secret code from the object:",
+    manualSubmit:"Confirm",
+    manualCancel:"Cancel",
+    manualError:"Wrong code. Try again.",
+    modelLoading:"Loading detector…",
+    modelReady:"⚡ Detector ready",
+  },
+  lt:{
+    instructionPrefix:"Rask ir nukreipk kamerą į:",
+    instructionSuffix:"Laikyk ramiai — aptikimas automatinis!",
+    statusReady:"⚡ Paruošta — nukreipk į objektą",
+    statusScanning:"🔍 Skenuojama…",
+    statusWrong:"Nerasta — bandyk toliau",
+    statusError:"API klaida — bandyk dar",
+    statusSuccess:"✅ Aptikta!",
+    scanBtn:"⚡ Skenuoti",
+    manualBtn:"Įvesti kodą rankiniu būdu",
+    stageTitle:"Etapas",stageOf:"iš",
+    stageWinTitle:"Įkrauta! ⚡",
+    stageWinNext:"Kitas etapas →",
+    winTitle:"PILNAI ĮKRAUTA! ⚡",
+    winSubtitle:"Užbaigei High Voltage Cache! Galutinės koordinatės:",
+    copyBtn:"Kopijuoti koordinates",
+    copiedBtn:"Nukopijuota! ✓",
+    lossTitle:"Srovė nutrūko! 💀",
+    lossSubtitle:"Laikas baigėsi. Bandyti iš naujo?",
+    retryBtn:"Jungtis iš naujo ⚡",
+    manualTitle:"Rankinis įvedimas",
+    manualSubtitle:"Įvesk slaptą kodą nuo objekto:",
+    manualSubmit:"Patvirtinti",
+    manualCancel:"Atšaukti",
+    manualError:"Neteisingas kodas. Bandyk dar.",
+    modelLoading:"Kraunamas aptiktuvas…",
+    modelReady:"⚡ Aptiktuvas paruoštas",
+  }
 };
 
-/* =================================================================
+/* ================================================================
    STATE
-   ================================================================= */
-let currentLang   = "en";
+================================================================ */
+let lang          = "en";
 let videoStream   = null;
 let timerInterval = null;
-let timeRemaining = TIMER_DURATION;
+let scanInterval  = null;
+let timeLeft      = TIMER_DURATION;
 let gameEnded     = false;
-let currentStage  = 0;
-let isSending     = false;
-let detector      = null;
+let stage         = 0;
+let hitCount      = 0;
 let debugMode     = false;
+let lastPreds     = [];
 
-/* =================================================================
+/* ================================================================
    ELEMENTS
-   ================================================================= */
-const $ = id => document.getElementById(id);
-const screenLang      = $("screen-lang");
-const screenGame      = $("screen-game");
-const instructionText = $("instructionText");
-const timerDisplay    = $("timerDisplay");
-const statusPill      = $("statusPill");
-const stageLabel      = $("stageLabel");
-const stageDots       = $("stageDots");
-const video           = $("camera");
-const scanBtn         = $("scanBtn");
-const scanBtnLabel    = $("scanBtnLabel");
-const manualBtn       = $("manualBtn");
-const overlayStageWin = $("overlay-stage-win");
-const stageWinTitle   = $("stageWinTitle");
-const stageWinObject  = $("stageWinObject");
-const nextStageBtn    = $("nextStageBtn");
-const overlayWin      = $("overlay-win");
-const winTitle        = $("winTitle");
-const winSubtitle     = $("winSubtitle");
-const winCoords       = $("winCoords");
-const copyBtn         = $("copyBtn");
-const overlayLoss     = $("overlay-loss");
-const lossTitle       = $("lossTitle");
-const retryBtn        = $("retryBtn");
-const overlayManual   = $("overlay-manual");
-const manualTitle     = $("manualTitle");
-const manualSubtitle  = $("manualSubtitle");
-const manualInput     = $("manualInput");
-const manualError     = $("manualError");
-const manualSubmit    = $("manualSubmit");
-const manualCancel    = $("manualCancel");
-const modelBanner     = $("modelBanner");
-const modelPct        = $("modelPct");
-const modelFill       = $("modelFill");
-const debugToggle     = $("debugToggle");
-const debugList       = $("debugList");
+================================================================ */
+const $= id=>document.getElementById(id);
+const elScreenLang    =$("screen-lang");
+const elScreenGame    =$("screen-game");
+const elInstruction   =$("instructionText");
+const elTimer         =$("timerDisplay");
+const elStatus        =$("statusPill");
+const elStageLabel    =$("stageLabel");
+const elStageDots     =$("stageDots");
+const elVideo         =$("camera");
+const elScanBtn       =$("scanBtn");
+const elScanBtnLabel  =$("scanBtnLabel");
+const elManualBtn     =$("manualBtn");
+const elDebugToggle   =$("debugToggle");
+const elDebugList     =$("debugList");
+const elModelBanner   =$("modelBanner");
+const elModelTxt      =$("modelTxt");
+const elModelFill     =$("modelFill");
+// overlays
+const elStageWin      =$("overlay-stage-win");
+const elStageWinTitle =$("stageWinTitle");
+const elStageWinDesc  =$("stageWinDesc");
+const elNextStageBtn  =$("nextStageBtn");
+const elWin           =$("overlay-win");
+const elWinTitle      =$("winTitle");
+const elWinSubtitle   =$("winSubtitle");
+const elWinCoords     =$("winCoords");
+const elCopyBtn       =$("copyBtn");
+const elLoss          =$("overlay-loss");
+const elLossTitle     =$("lossTitle");
+const elLossSubtitle  =$("lossSubtitle");
+const elRetryBtn      =$("retryBtn");
+const elManualOverlay =$("overlay-manual");
+const elManualTitle   =$("manualTitle");
+const elManualSub     =$("manualSubtitle");
+const elManualInput   =$("manualInput");
+const elManualError   =$("manualError");
+const elManualSubmit  =$("manualSubmit");
+const elManualCancel  =$("manualCancel");
 
-/* =================================================================
-   LANGUAGE SELECT
-   ================================================================= */
-document.querySelectorAll(".lang-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    currentLang = btn.dataset.lang;
-    screenLang.classList.add("hidden");
-    screenGame.classList.remove("hidden");
+/* ================================================================
+   LANG SELECT
+================================================================ */
+document.querySelectorAll(".lang-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    lang=btn.dataset.lang;
+    elScreenLang.classList.add("hidden");
+    elScreenGame.classList.remove("hidden");
     startGame();
   });
 });
+const tr=()=>T[lang];
 
-function tr() { return T[currentLang]; }
-
-/* =================================================================
-   UI HELPERS
-   ================================================================= */
-function applyTranslations() {
-  const L = tr();
-  const stage = STAGES[currentStage];
-  const obj   = stage[currentLang];
-  instructionText.innerHTML = `<b>${L.instructionPrefix}</b> ${obj} — ${L.instructionSuffix}`;
-  manualBtn.textContent      = L.manualBtn;
-  scanBtnLabel.textContent   = L.scanBtn;
-  stageLabel.textContent     = `${L.stageTitle} ${currentStage+1} ${L.stageOf} ${STAGES.length}`;
-  stageWinTitle.textContent  = L.stageWinTitle;
-  stageWinObject.textContent = obj;
-  nextStageBtn.textContent   = L.stageWinNext;
-  winTitle.textContent       = L.finalWinTitle;
-  winSubtitle.textContent    = L.finalWinSubtitle;
-  winCoords.textContent      = FINAL_COORDINATES;
-  copyBtn.textContent        = L.copyBtn;
-  lossTitle.textContent      = L.lossTitle;
-  retryBtn.textContent       = L.retryBtn;
-  manualTitle.textContent    = L.manualTitle;
-  manualSubtitle.textContent = L.manualSubtitle;
-  manualSubmit.textContent   = L.manualSubmit;
-  manualCancel.textContent   = L.manualCancel;
-  manualError.textContent    = "";
+/* ================================================================
+   UI
+================================================================ */
+function applyUI(){
+  const L=tr(), s=STAGES[stage];
+  const obj=s[lang]||s.en;
+  elInstruction.innerHTML=`<b>${L.instructionPrefix}</b> <span style="color:var(--yellow);font-weight:800;">${obj}</span><br><span style="font-size:.85rem;color:#aaa;">${L.instructionSuffix}</span>`;
+  elManualBtn.textContent=L.manualBtn;
+  elScanBtnLabel.textContent=L.scanBtn;
+  elStageLabel.textContent=`${L.stageTitle} ${stage+1} ${L.stageOf} ${STAGES.length}`;
+  elStageWinTitle.textContent=L.stageWinTitle;
+  elStageWinDesc.textContent=obj;
+  elNextStageBtn.textContent=L.stageWinNext;
+  elWinTitle.textContent=L.winTitle;
+  elWinSubtitle.textContent=L.winSubtitle;
+  elWinCoords.textContent=FINAL_COORDS;
+  elCopyBtn.textContent=L.copyBtn;
+  elLossTitle.textContent=L.lossTitle;
+  elLossSubtitle.textContent=L.lossSubtitle;
+  elRetryBtn.textContent=L.retryBtn;
+  elManualTitle.textContent=L.manualTitle;
+  elManualSub.textContent=L.manualSub;
+  elManualSubmit.textContent=L.manualSubmit;
+  elManualCancel.textContent=L.manualCancel;
+  elManualError.textContent="";
+  renderDots();
 }
 
-function renderDots() {
-  stageDots.innerHTML = "";
-  STAGES.forEach((_,i) => {
-    const d = document.createElement("div");
-    d.className = "stage-dot" + (i < currentStage ? " done" : i === currentStage ? " active" : "");
-    stageDots.appendChild(d);
+function renderDots(){
+  elStageDots.innerHTML="";
+  STAGES.forEach((_,i)=>{
+    const d=document.createElement("div");
+    d.className="dot"+(i<stage?" done":i===stage?" active":"");
+    elStageDots.appendChild(d);
   });
 }
 
-function setStatus(key, cls) {
-  const txt = tr()[key] || key;
-  statusPill.textContent = txt;
-  statusPill.className   = "status-pill" + (cls ? " "+cls : "");
+function setStatus(key,cls){
+  elStatus.textContent=tr()[key]||key;
+  elStatus.className="status-pill"+(cls?" "+cls:"");
 }
 
-/* =================================================================
-   GAME
-   ================================================================= */
-async function startGame() {
-  gameEnded = false; currentStage = 0; timeRemaining = TIMER_DURATION; isSending = false;
-  timerDisplay.classList.remove("warning");
-  ["overlay-win","overlay-loss","overlay-stage-win"].forEach(id => $(id).classList.add("hidden"));
-  scanBtn.disabled = true;
-  applyTranslations(); renderDots(); updateTimerDisplay();
+/* ================================================================
+   GAME FLOW
+================================================================ */
+async function startGame(){
+  gameEnded=false; stage=0; timeLeft=TIMER_DURATION; hitCount=0;
+  elTimer.classList.remove("warning");
+  ["overlay-win","overlay-loss","overlay-stage-win"].forEach(id=>$(id).classList.add("hidden"));
+  elScanBtn.disabled=true;
+  applyUI(); updateTimer();
   await startCamera();
-  await loadDetector();
+  showModelBanner();
+  startScanning();
 }
 
-function advanceStage() {
-  currentStage++;
-  overlayStageWin.classList.add("hidden");
-  applyTranslations(); renderDots();
+function advanceStage(){
+  stage++; hitCount=0;
+  elStageWin.classList.add("hidden");
+  applyUI();
   setStatus("statusReady","ready");
-  scanBtn.disabled = false;
 }
-nextStageBtn.addEventListener("click", advanceStage);
+elNextStageBtn.addEventListener("click",advanceStage);
 
-function startTimer() {
+function startTimer(){
   clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    timeRemaining--;
-    updateTimerDisplay();
-    if (timeRemaining <= 30) timerDisplay.classList.add("warning");
-    if (timeRemaining <= 0) endGame("loss");
-  }, 1000);
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    updateTimer();
+    if(timeLeft<=30) elTimer.classList.add("warning");
+    if(timeLeft<=0) endGame("loss");
+  },1000);
 }
-function updateTimerDisplay() {
-  const m = Math.floor(Math.max(timeRemaining,0)/60);
-  const s = Math.max(timeRemaining,0) % 60;
-  timerDisplay.textContent = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+function updateTimer(){
+  const m=Math.floor(Math.max(timeLeft,0)/60);
+  const s=Math.max(timeLeft,0)%60;
+  elTimer.textContent=`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
 
-/* =================================================================
+/* ================================================================
    CAMERA
-   ================================================================= */
-async function startCamera() {
-  try {
-    videoStream = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:"environment", width:{ideal:1280}, height:{ideal:720} }, audio:false
+================================================================ */
+async function startCamera(){
+  try{
+    videoStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:"environment",width:{ideal:1280},height:{ideal:720}},audio:false
     });
-    video.srcObject = videoStream;
-    await video.play();
-  } catch(err) {
+    elVideo.srcObject=videoStream;
+    await elVideo.play();
+  }catch(e){
     setStatus("statusError","error");
-    console.error("Camera:",err);
+    console.error("Camera:",e);
   }
 }
-function stopCamera() {
-  if (videoStream) { videoStream.getTracks().forEach(t=>t.stop()); videoStream=null; }
+function stopCamera(){
+  clearInterval(scanInterval);
+  if(videoStream){videoStream.getTracks().forEach(t=>t.stop());videoStream=null;}
 }
 
-/* =================================================================
-   LOAD COCO-SSD MODEL
-   ================================================================= */
-async function loadDetector() {
-  if (detector) {
-    modelBanner.classList.add("hidden");
-    setStatus("statusReady","ready");
-    scanBtn.disabled = false;
-    startTimer();
+/* ================================================================
+   CAPTURE FRAME
+================================================================ */
+function captureBase64(){
+  const c=document.createElement("canvas");
+  c.width=elVideo.videoWidth||640;
+  c.height=elVideo.videoHeight||480;
+  c.getContext("2d").drawImage(elVideo,0,0);
+  return c.toDataURL("image/jpeg",0.8).split(",")[1];
+}
+
+/* ================================================================
+   MODEL BANNER (fake progress while API warms up)
+================================================================ */
+function showModelBanner(){
+  elModelBanner.classList.remove("hidden");
+  elModelTxt.textContent=tr().modelLoading;
+  elModelFill.style.width="0%";
+  let p=0;
+  const iv=setInterval(()=>{
+    p=Math.min(p+8,90);
+    elModelFill.style.width=p+"%";
+  },200);
+  // mark ready after first successful scan
+  window._modelReadyCb=()=>{
+    clearInterval(iv);
+    elModelFill.style.width="100%";
+    elModelTxt.textContent=tr().modelReady;
+    setTimeout(()=>elModelBanner.classList.add("hidden"),800);
+    window._modelReadyCb=null;
+  };
+}
+
+/* ================================================================
+   ROBOFLOW API CALL
+================================================================ */
+async function callRoboflow(b64){
+  const resp=await fetch(ROBOFLOW_URL,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      api_key:ROBOFLOW_KEY,
+      inputs:{"image":{"type":"base64","value":b64}}
+    })
+  });
+  if(!resp.ok) throw new Error("HTTP "+resp.status);
+  return await resp.json();
+}
+
+/* Parse predictions from whatever structure Roboflow returns */
+function extractPredictions(data){
+  // Try common structures
+  if(Array.isArray(data)){
+    // workflow returns array of output objects
+    for(const item of data){
+      const preds=item?.predictions?.predictions
+        || item?.predictions
+        || item?.outputs?.predictions?.predictions
+        || item?.outputs?.predictions;
+      if(Array.isArray(preds)) return preds;
+    }
+  }
+  // flat object
+  return data?.predictions?.predictions
+    || data?.predictions
+    || data?.outputs?.predictions?.predictions
+    || data?.outputs?.predictions
+    || [];
+}
+
+/* ================================================================
+   AUTO SCANNING LOOP
+================================================================ */
+function startScanning(){
+  clearInterval(scanInterval);
+  let scanning=false;
+  scanInterval=setInterval(async()=>{
+    if(gameEnded||scanning) return;
+    if(!videoStream) return;
+    scanning=true;
+    setStatus("statusScanning","sending");
+    try{
+      const b64=captureBase64();
+      const data=await callRoboflow(b64);
+
+      // Mark model ready on first response
+      if(window._modelReadyCb) window._modelReadyCb();
+
+      const preds=extractPredictions(data);
+      lastPreds=preds;
+      if(debugMode) renderDebug(preds);
+
+      elScanBtn.disabled=false;
+
+      const target=STAGES[stage].object.toLowerCase();
+      const hit=preds.some(p=>
+        p.class?.toLowerCase()===target &&
+        p.confidence>=CONFIDENCE_THRESHOLD
+      );
+
+      if(hit){
+        hitCount++;
+        setStatus("statusSuccess","success");
+        if(hitCount>=CONFIRM_HITS){
+          hitCount=0;
+          if(stage===STAGES.length-1){
+            endGame("win");
+          } else {
+            elStageWin.classList.remove("hidden");
+            // start timer on first confirmed object if not started
+            if(!timerInterval) startTimer();
+          }
+        }
+      } else {
+        if(hitCount>0) hitCount=Math.max(0,hitCount-1);
+        setStatus(preds.length?"statusWrong":"statusReady", preds.length?"error":"ready");
+      }
+
+      // Start timer after first API response
+      if(!timerInterval) startTimer();
+
+    }catch(e){
+      console.error("Roboflow error:",e);
+      setStatus("statusError","error");
+      if(!timerInterval) startTimer();
+    } finally {
+      scanning=false;
+    }
+  },SCAN_INTERVAL_MS);
+}
+
+/* ================================================================
+   DEBUG
+================================================================ */
+function renderDebug(preds){
+  elDebugList.innerHTML="";
+  if(!preds.length){
+    const t=document.createElement("div");
+    t.className="dtag"; t.textContent="nothing detected";
+    elDebugList.appendChild(t);
     return;
   }
-
-  modelBanner.classList.remove("hidden");
-  setModelProgress(10);
-
-  try {
-    // Fake progress while loading
-    let fakeP = 10;
-    const fakeInterval = setInterval(() => {
-      fakeP = Math.min(fakeP + 5, 85);
-      setModelProgress(fakeP);
-    }, 400);
-
-    detector = await cocoSsd.load({ base: "mobilenet_v2" });
-
-    clearInterval(fakeInterval);
-    setModelProgress(100);
-    await new Promise(r => setTimeout(r, 400));
-    modelBanner.classList.add("hidden");
-    setStatus("modelReady","ready");
-    scanBtn.disabled = false;
-    startTimer();
-  } catch(err) {
-    console.error("Model load error:", err);
-    setStatus("statusError","error");
-  }
-}
-
-function setModelProgress(pct) {
-  modelFill.style.width = pct + "%";
-  modelPct.textContent  = pct + "%";
-}
-
-/* =================================================================
-   DETECT on a single video frame
-   ================================================================= */
-async function detectFrame() {
-  if (!detector || !videoStream) return [];
-  try {
-    const predictions = await detector.detect(video);
-    return predictions;
-  } catch(e) {
-    return [];
-  }
-}
-
-/* =================================================================
-   DEBUG TAGS — rendered only during/after a scan, not continuously
-   ================================================================= */
-function renderDebugTags(preds) {
-  debugList.innerHTML = "";
-  if (!preds.length) {
-    const tag = document.createElement("div");
-    tag.className = "debug-tag";
-    tag.textContent = "nothing detected";
-    debugList.appendChild(tag);
-    return;
-  }
-  const targetSynonyms = SYNONYMS[STAGES[currentStage].object] || [STAGES[currentStage].object];
-  preds.forEach(p => {
-    const label = p.class.toLowerCase();
-    const pct   = Math.round(p.score * 100);
-    const isMatch = targetSynonyms.includes(label);
-    const tag = document.createElement("div");
-    tag.className = "debug-tag" + (isMatch ? " highlight" : "");
-    tag.textContent = `${p.class} ${pct}%${isMatch ? " ✓ TARGET" : ""}`;
-    debugList.appendChild(tag);
+  const target=STAGES[stage].object.toLowerCase();
+  preds.forEach(p=>{
+    const isHit=p.class?.toLowerCase()===target;
+    const t=document.createElement("div");
+    t.className="dtag"+(isHit?" hit":"");
+    t.textContent=`${p.class} ${Math.round((p.confidence||0)*100)}%${isHit?" ✓":""}`;
+    elDebugList.appendChild(t);
   });
 }
-
-/* =================================================================
-   DEBUG TOGGLE
-   ================================================================= */
-debugToggle.addEventListener("click", () => {
-  debugMode = !debugMode;
-  debugToggle.textContent = debugMode ? "🔍 Debug ON" : "🔍 Debug OFF";
-  debugList.innerHTML = "";
+elDebugToggle.addEventListener("click",()=>{
+  debugMode=!debugMode;
+  elDebugToggle.textContent=debugMode?"🔍 ON":"🔍 OFF";
+  if(!debugMode) elDebugList.innerHTML="";
+  else if(lastPreds.length) renderDebug(lastPreds);
 });
 
-/* =================================================================
-   MULTI-FRAME SCAN
-   ================================================================= */
-async function multiFrameScan() {
-  const targetSynonyms = SYNONYMS[STAGES[currentStage].object] || [STAGES[currentStage].object];
-  let hits = 0;
-
-  for (let i = 0; i < SCAN_FRAMES; i++) {
-    const preds = await detectFrame();
-    if (debugMode) renderDebugTags(preds);
-    const found = preds.some(p =>
-      p.score >= CONFIDENCE_THRESHOLD &&
-      targetSynonyms.includes(p.class.toLowerCase())
-    );
-    if (found) hits++;
-    if (i < SCAN_FRAMES - 1) await new Promise(r => setTimeout(r, FRAME_DELAY_MS));
-  }
-
-  // Need at least 1 hit out of SCAN_FRAMES to confirm
-  return hits >= 1;
-}
-
-/* =================================================================
-   SCAN BUTTON
-   ================================================================= */
-scanBtn.addEventListener("click", async () => {
-  if (isSending || gameEnded || !detector) return;
-  isSending = true;
-  scanBtn.disabled = true;
-  setStatus("statusSending","sending");
-
-  try {
-    const found = await multiFrameScan();
-    if (found) {
-      if (currentStage === STAGES.length - 1) {
-        endGame("win");
-      } else {
-        overlayStageWin.classList.remove("hidden");
-      }
-    } else {
-      setStatus("statusWrong","error");
-      setTimeout(() => { setStatus("statusReady","ready"); }, 1800);
-      scanBtn.disabled = false;
-    }
-  } catch(err) {
-    console.error("Scan error:", err);
-    setStatus("statusError","error");
-    scanBtn.disabled = false;
-  } finally {
-    isSending = false;
-  }
+/* manual scan button still works as instant check */
+elScanBtn.addEventListener("click",()=>{
+  hitCount=CONFIRM_HITS-1; // one more hit will trigger
 });
 
-/* =================================================================
+/* ================================================================
    END GAME
-   ================================================================= */
-function endGame(result) {
-  if (gameEnded) return;
-  gameEnded = true;
-  clearInterval(timerInterval);
+================================================================ */
+function endGame(result){
+  if(gameEnded) return;
+  gameEnded=true;
+  clearInterval(timerInterval); timerInterval=null;
+  clearInterval(scanInterval);  scanInterval=null;
   stopCamera();
-  overlayStageWin.classList.add("hidden");
-  $(result==="win" ? "overlay-win" : "overlay-loss").classList.remove("hidden");
+  elStageWin.classList.add("hidden");
+  $(result==="win"?"overlay-win":"overlay-loss").classList.remove("hidden");
 }
 
-copyBtn.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(FINAL_COORDINATES);
-    copyBtn.textContent = tr().copiedBtn;
-    setTimeout(() => { copyBtn.textContent = tr().copyBtn; }, 2500);
-  } catch {
-    const r = document.createRange();
-    r.selectNode(winCoords);
+elCopyBtn.addEventListener("click",async()=>{
+  try{
+    await navigator.clipboard.writeText(FINAL_COORDS);
+    elCopyBtn.textContent=tr().copiedBtn;
+    setTimeout(()=>elCopyBtn.textContent=tr().copyBtn,2500);
+  }catch{
+    const r=document.createRange();
+    r.selectNode(elWinCoords);
     window.getSelection().removeAllRanges();
     window.getSelection().addRange(r);
   }
 });
-retryBtn.addEventListener("click", () => { overlayLoss.classList.add("hidden"); startGame(); });
+elRetryBtn.addEventListener("click",()=>{elLoss.classList.add("hidden");startGame();});
 
-/* =================================================================
+/* ================================================================
    MANUAL CODE
-   ================================================================= */
-manualBtn.addEventListener("click", () => { manualInput.value=""; manualError.textContent=""; overlayManual.classList.remove("hidden"); });
-manualCancel.addEventListener("click", () => overlayManual.classList.add("hidden"));
-manualSubmit.addEventListener("click", () => {
-  if (manualInput.value.trim().toUpperCase() === MANUAL_CODE.toUpperCase()) {
-    overlayManual.classList.add("hidden"); endGame("win");
+================================================================ */
+elManualBtn.addEventListener("click",()=>{elManualInput.value="";elManualError.textContent="";elManualOverlay.classList.remove("hidden");});
+elManualCancel.addEventListener("click",()=>elManualOverlay.classList.add("hidden"));
+elManualSubmit.addEventListener("click",()=>{
+  if(elManualInput.value.trim().toUpperCase()===MANUAL_CODE.toUpperCase()){
+    elManualOverlay.classList.add("hidden"); endGame("win");
   } else {
-    manualError.textContent = tr().manualError;
+    elManualError.textContent=tr().manualError;
   }
 });
 </script>
