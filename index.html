@@ -135,8 +135,13 @@
 </div>
 <script>
 /* CONFIG */
-const ROBOFLOW_URL         = "https://detect.roboflow.com/infer/workflows/deimax-s-workspace/find-tree-rock-and-more";
-const ROBOFLOW_KEY         = "kOx9rfH2ZRLrbzgKezKO";
+// FIX: calling detect.roboflow.com directly from the browser was blocked by
+// CORS (Roboflow's workflow endpoint doesn't return Access-Control-Allow-Origin
+// for browser callers). We now call our own serverless proxy instead, which
+// forwards the request to Roboflow server-side where CORS doesn't apply.
+// Replace this with your actual deployed proxy URL, e.g.
+// "https://your-project.vercel.app/api/infer"
+const PROXY_URL             = "https://gcbp-0-ct.vercel.app/api/infer";
 const FINAL_COORDS         = "N 55\u00b0 42.566 E 21\u00b0 08.396";
 const TIMER_DURATION       = 300;
 const MANUAL_CODE          = "VOLTAGE42";
@@ -440,17 +445,19 @@ function updateStruggleBanner(){
   elModelTxt.textContent = tr().modelStruggling;
 }
 
-/* ROBOFLOW */
+/* ROBOFLOW (via proxy) */
 async function callRoboflow(b64){
   // FIX: abort the request if it hangs instead of waiting on it indefinitely —
   // this was the main cause of the UI appearing permanently "stuck".
   const controller = new AbortController();
   const timeoutId  = setTimeout(()=>controller.abort(), REQUEST_TIMEOUT_MS);
   try{
-    const resp=await fetch(ROBOFLOW_URL,{
+    // FIX: call our own proxy, not Roboflow directly — no api_key here,
+    // the proxy attaches it server-side from an environment variable.
+    const resp=await fetch(PROXY_URL,{
       method:"POST",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({api_key:ROBOFLOW_KEY,inputs:{"image":{"type":"base64","value":b64}}}),
+      body:JSON.stringify({image:b64}),
       signal: controller.signal
     });
     if(!resp.ok){
@@ -458,7 +465,7 @@ async function callRoboflow(b64){
       // (bad key, wrong workflow path, etc.) instead of a generic status code.
       let bodyText = "";
       try{ bodyText = await resp.text(); }catch(_){}
-      console.error("Roboflow error response:", resp.status, bodyText);
+      console.error("Proxy error response:", resp.status, bodyText);
       throw new Error("HTTP "+resp.status+": "+bodyText.slice(0,200));
     }
     return resp.json();
