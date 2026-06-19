@@ -391,9 +391,36 @@ function updateTimer(){
 /* CAMERA */
 async function startCamera(){
   try{
-    videoStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+    // FIX: on multi-lens phones, the browser sometimes defaults to the
+    // ultra-wide (0.5x) lens, whose distortion can be enough to break
+    // detection even on objects the model otherwise recognizes fine.
+    // Try requesting a sane zoom level to steer toward the main lens first.
+    const constraintsAttempts = [
+      {video:{facingMode:"environment", zoom:1}, audio:false},
+      {video:{facingMode:{exact:"environment"}, zoom:{ideal:1}}, audio:false},
+      {video:{facingMode:"environment"}, audio:false}, // fallback: original behavior
+    ];
+    for(const constraints of constraintsAttempts){
+      try{
+        videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+        break;
+      }catch(_){ /* try next constraint set */ }
+    }
+    if(!videoStream) throw new Error("No camera constraints succeeded");
     elVideo.srcObject=videoStream;
     await elVideo.play();
+
+    // FIX: if the browser exposes zoom as a controllable track capability,
+    // explicitly set it to 1x (main lens) rather than trusting getUserMedia's
+    // default camera selection.
+    const track = videoStream.getVideoTracks()[0];
+    if(track && track.getCapabilities){
+      const caps = track.getCapabilities();
+      if(caps.zoom){
+        const targetZoom = Math.max(caps.zoom.min, Math.min(1, caps.zoom.max));
+        try{ await track.applyConstraints({advanced:[{zoom:targetZoom}]}); }catch(_){}
+      }
+    }
   }catch(e){ console.error("Camera:",e); }
 }
 
