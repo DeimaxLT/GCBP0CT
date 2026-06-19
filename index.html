@@ -250,6 +250,7 @@ let modelReady    = false;
 let bannerIv      = null;
 let isErrorState  = false;  // true only once we're in a *sustained* failure run (>= threshold)
 let consecutiveErrors = 0;  // FIX: counts back-to-back failures so single blips don't trigger the error UI
+let lastCapturedDataUrl = null;  // DEBUG: most recent captured frame, for the long-press download feature
 
 /* ELEMENTS */
 const $= id=>document.getElementById(id);
@@ -413,6 +414,7 @@ function captureBase64(){
   c.width=w; c.height=h;
   c.getContext("2d").drawImage(elVideo,0,0);
   const dataUrl = c.toDataURL("image/jpeg",0.8);
+  lastCapturedDataUrl = dataUrl;  // DEBUG: keep the latest frame available for long-press download
   // DEBUG: log frame dimensions and a way to view the actual captured image,
   // so we can confirm the camera frame looks correct before it's sent out.
   if(debugMode){
@@ -580,6 +582,24 @@ elDebugToggle.addEventListener("click",()=>{
   if(!debugMode) elDebugList.innerHTML="";
   else if(lastPreds.length) renderDebug(lastPreds);
 });
+
+// DEBUG: long-press the debug button to download the most recent captured
+// frame as a real .jpg file — lets you grab the exact image the app sent
+// to Roboflow without needing console access (handy on mobile).
+let debugPressTimer = null;
+elDebugToggle.addEventListener("touchstart",()=>{
+  debugPressTimer=setTimeout(()=>{
+    if(lastCapturedDataUrl){
+      const a=document.createElement("a");
+      a.href=lastCapturedDataUrl;
+      a.download="captured-frame.jpg";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  },800);
+});
+elDebugToggle.addEventListener("touchend",()=>clearTimeout(debugPressTimer));
 
 // Scan button gives hitCount a boost (one tap away from confirming)
 elScanBtn.addEventListener("click",()=>{ if(!elScanBtn.disabled) hitCount=CONFIRM_HITS-1; });
