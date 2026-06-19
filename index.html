@@ -355,6 +355,11 @@ async function startGame(){
   updateTimer(); applyUI();
   setStatus("statusConnecting","sending");
   await startCamera();
+  // DEBUG: give a few seconds to read the on-screen camera label before
+  // the normal "Connecting to detector" banner text overwrites it.
+  if(window.__debugCameraList){
+    await new Promise(r=>setTimeout(r,6000));
+  }
   showModelBanner();
   scheduleNextScan(0);
 }
@@ -408,6 +413,8 @@ async function startCamera(){
       }
       const cams = devices.filter(d=>d.kind==="videoinput");
       console.log("Available cameras:", cams.map(c=>c.label));
+      // DEBUG: surface this in the UI too, since console isn't easily visible on mobile
+      window.__debugCameraList = cams.map(c=>c.label).join(" | ");
       // Prefer a label that explicitly says "back"/"rear" but NOT "ultra"/"wide"/"tele"
       const main = cams.find(c=>{
         const l=c.label.toLowerCase();
@@ -435,6 +442,11 @@ async function startCamera(){
 
     const track = videoStream.getVideoTracks()[0];
     console.log("Using camera:", track?.label);
+    // DEBUG: show the chosen camera label directly in the UI so it's visible
+    // on mobile without needing console/devtools access.
+    if(track?.label){
+      elModelTxt.textContent = "📷 " + track.label + " | ALL: " + (window.__debugCameraList||"?");
+    }
     if(track && track.getCapabilities){
       const caps = track.getCapabilities();
       if(caps.zoom){
