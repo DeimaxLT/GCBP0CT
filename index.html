@@ -391,13 +391,36 @@ function updateTimer(){
 /* CAMERA */
 async function startCamera(){
   try{
-    // FIX: on multi-lens phones, the browser sometimes defaults to the
-    // ultra-wide (0.5x) lens, whose distortion can be enough to break
-    // detection even on objects the model otherwise recognizes fine.
-    // Try requesting a sane zoom level to steer toward the main lens first.
+    // FIX: the `zoom` constraint isn't reliably honored on Android Chrome —
+    // it often still defaults to the ultra-wide lens. Instead, enumerate the
+    // actual camera devices and pick the main rear lens by label, since
+    // multi-lens phones (Samsung especially) label them predictably
+    // (e.g. "Back Camera" vs "Back Ultra Wide Camera").
+    let chosenDeviceId = null;
+    try{
+      // labels are only populated after at least one getUserMedia call has
+      // been granted, so do a throwaway request first if needed
+      let devices = await navigator.mediaDevices.enumerateDevices();
+      if(devices.every(d=>!d.label)){
+        const temp = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+        temp.getTracks().forEach(t=>t.stop());
+        devices = await navigator.mediaDevices.enumerateDevices();
+      }
+      const cams = devices.filter(d=>d.kind==="videoinput");
+      console.log("Available cameras:", cams.map(c=>c.label));
+      // Prefer a label that explicitly says "back"/"rear" but NOT "ultra"/"wide"/"tele"
+      const main = cams.find(c=>{
+        const l=c.label.toLowerCase();
+        const isBack = l.includes("back") || l.includes("rear") || l.includes("environment");
+        const isAltLens = l.includes("ultra") || l.includes("wide") || l.includes("tele") || l.includes("macro");
+        return isBack && !isAltLens;
+      });
+      if(main) chosenDeviceId = main.deviceId;
+    }catch(e){ console.error("Camera enumeration failed:", e); }
+
     const constraintsAttempts = [
+      ...(chosenDeviceId ? [{video:{deviceId:{exact:chosenDeviceId}}, audio:false}] : []),
       {video:{facingMode:"environment", zoom:1}, audio:false},
-      {video:{facingMode:{exact:"environment"}, zoom:{ideal:1}}, audio:false},
       {video:{facingMode:"environment"}, audio:false}, // fallback: original behavior
     ];
     for(const constraints of constraintsAttempts){
@@ -410,10 +433,8 @@ async function startCamera(){
     elVideo.srcObject=videoStream;
     await elVideo.play();
 
-    // FIX: if the browser exposes zoom as a controllable track capability,
-    // explicitly set it to 1x (main lens) rather than trusting getUserMedia's
-    // default camera selection.
     const track = videoStream.getVideoTracks()[0];
+    console.log("Using camera:", track?.label);
     if(track && track.getCapabilities){
       const caps = track.getCapabilities();
       if(caps.zoom){
