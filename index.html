@@ -416,12 +416,25 @@ async function startCamera(){
       // DEBUG: surface this in the UI too, since console isn't easily visible on mobile
       window.__debugCameraList = cams.map(c=>c.label).join(" | ");
       // Prefer a label that explicitly says "back"/"rear" but NOT "ultra"/"wide"/"tele"
-      const main = cams.find(c=>{
+      let main = cams.find(c=>{
         const l=c.label.toLowerCase();
         const isBack = l.includes("back") || l.includes("rear") || l.includes("environment");
         const isAltLens = l.includes("ultra") || l.includes("wide") || l.includes("tele") || l.includes("macro");
         return isBack && !isAltLens;
       });
+      // FIX: some Android/Chrome builds give generic labels like "camera 0,
+      // facing back" with no lens-type info at all. In that case, fall back
+      // to picking the LOWEST-numbered back-facing camera, since index 0 is
+      // conventionally the main lens on most Android devices (higher indices
+      // are typically ultra-wide/telephoto add-ons).
+      if(!main){
+        const backCams = cams.filter(c=>c.label.toLowerCase().includes("back"));
+        const withIndex = backCams.map(c=>{
+          const m = c.label.match(/camera\s*(\d+)/i);
+          return {cam:c, idx: m ? parseInt(m[1],10) : 99};
+        }).sort((a,b)=>a.idx-b.idx);
+        if(withIndex.length) main = withIndex[0].cam;
+      }
       if(main) chosenDeviceId = main.deviceId;
     }catch(e){ console.error("Camera enumeration failed:", e); }
 
