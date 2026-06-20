@@ -345,6 +345,7 @@ function renderDots(){
 function setStatus(key,cls){
   elStatus.textContent = tr()[key]||key;
   elStatus.className   = "status-pill"+(cls?" "+cls:"");
+  elStatus.dataset.key = key;  // FIX: track current status key so repeated identical calls can be skipped
 }
 
 /* GAME */
@@ -359,11 +360,6 @@ async function startGame(){
   updateTimer(); applyUI();
   setStatus("statusConnecting","sending");
   await startCamera();
-  // DEBUG: give a few seconds to read the on-screen camera label before
-  // the normal "Connecting to detector" banner text overwrites it.
-  if(window.__debugCameraList){
-    await new Promise(r=>setTimeout(r,6000));
-  }
   showModelBanner();
   scheduleNextScan(0);
 }
@@ -422,13 +418,24 @@ async function startCamera(){
       // DEBUG: keep the full back-camera list available for manual cycling,
       // since automatic wide/main detection isn't reliable on all devices.
       backCameraList = cams.filter(c=>c.label.toLowerCase().includes("back"));
-      // Prefer a label that explicitly says "back"/"rear" but NOT "ultra"/"wide"/"tele"
-      let main = cams.find(c=>{
+      // Only trust the primary label matcher if the labels actually contain
+      // descriptive lens info (e.g. "wide", "ultra", "main", "tele") — generic
+      // labels like "camera 2, facing back" all contain "back" with no other
+      // signal, which made every back camera match equally and `.find()` just
+      // returned whichever happened to be first in the array (wrong lens).
+      const anyDescriptive = cams.some(c=>{
         const l=c.label.toLowerCase();
-        const isBack = l.includes("back") || l.includes("rear") || l.includes("environment");
-        const isAltLens = l.includes("ultra") || l.includes("wide") || l.includes("tele") || l.includes("macro");
-        return isBack && !isAltLens;
+        return l.includes("ultra")||l.includes("wide")||l.includes("tele")||l.includes("macro")||l.includes("main");
       });
+      let main = null;
+      if(anyDescriptive){
+        main = cams.find(c=>{
+          const l=c.label.toLowerCase();
+          const isBack = l.includes("back") || l.includes("rear") || l.includes("environment");
+          const isAltLens = l.includes("ultra") || l.includes("wide") || l.includes("tele") || l.includes("macro");
+          return isBack && !isAltLens;
+        });
+      }
       // FIX: some Android/Chrome builds give generic labels like "camera 0,
       // facing back" with no lens-type info at all. In that case, fall back
       // to picking the LOWEST-numbered back-facing camera, since index 0 is
@@ -462,11 +469,6 @@ async function startCamera(){
 
     const track = videoStream.getVideoTracks()[0];
     console.log("Using camera:", track?.label);
-    // DEBUG: show the chosen camera label directly in the UI so it's visible
-    // on mobile without needing console/devtools access.
-    if(track?.label){
-      elModelTxt.textContent = "📷 " + track.label + " | ALL: " + (window.__debugCameraList||"?");
-    }
     if(track && track.getCapabilities){
       const caps = track.getCapabilities();
       if(caps.zoom){
@@ -580,9 +582,14 @@ async function runScan(){
   if(gameEnded) return;
   if(!elStageWin.classList.contains("hidden")){ scheduleNextScan(500); return; }
 
-  // only show "scanning" status if we're not in a sustained error/retrying state
-  // — prevents flicker during backoff
-  if(!isErrorState) setStatus("statusScanning","sending");
+  // FIX: previously this set "Skenuojama" at the start of every single cycle,
+  // even when the result was going to be the same uneventful "nothing here"
+  // as the cycle before — that produced a visible flip between "Skenuojama"
+  // and "Paru\u0161ota" every 1.5s forever, which read as the status spamming.
+  // Now we only show the transient "scanning" text while we don't yet have a
+  // settled state to display (i.e. before the very first result comes in).
+  const hasSettledState = modelReady && !isErrorState;
+  if(!isErrorState && !hasSettledState) setStatus("statusScanning","sending");
 
   // skip API call if video frame not ready yet
   const b64 = captureBase64();
@@ -613,9 +620,14 @@ async function runScan(){
       }
     } else {
       if(hitCount>0) hitCount=Math.max(0,hitCount-1);
-      // only show "wrong" when something was detected but not the target;
-      // show "ready" when nothing at all was detected
-      setStatus(preds.length?"statusWrong":"statusReady", preds.length?"error":"ready");
+      // FIX: only actually change the displayed status if it's different from
+      // what's already showing — prevents re-setting "Paru\u0161ota" -> "Paru\u0161ota"
+      // every cycle, which was the visible source of the flicker/spam.
+      const nextKey = preds.length?"statusWrong":"statusReady";
+      const nextCls = preds.length?"error":"ready";
+      if(elStatus.dataset.key !== nextKey){
+        setStatus(nextKey, nextCls);
+      }
     }
     scheduleNextScan(SCAN_INTERVAL_MS);
   } catch(e){
