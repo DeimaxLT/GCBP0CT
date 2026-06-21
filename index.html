@@ -557,13 +557,25 @@ async function callRoboflow(b64){
 }
 
 function extractPredictions(data){
+  // FIX: this is the actual bug behind "nothing detected" despite Roboflow
+  // correctly finding objects at high confidence. The real response shape is
+  // { outputs: [ { predictions: { predictions: [...] } } ] } — `outputs` is
+  // an ARRAY, so `data.outputs.predictions` is always undefined (arrays don't
+  // have a .predictions property). The old code never indexed into outputs[0],
+  // so it silently fell through to an empty array on every single request.
+  if(Array.isArray(data?.outputs)){
+    for(const item of data.outputs){
+      const p = item?.predictions?.predictions || item?.predictions;
+      if(Array.isArray(p)) return p;
+    }
+  }
   if(Array.isArray(data)){
     for(const item of data){
       const p=item?.predictions?.predictions||item?.predictions||item?.outputs?.predictions?.predictions||item?.outputs?.predictions;
       if(Array.isArray(p)) return p;
     }
   }
-  return data?.predictions?.predictions||data?.predictions||data?.outputs?.predictions?.predictions||data?.outputs?.predictions||[];
+  return data?.predictions?.predictions||data?.predictions||[];
 }
 
 /* SCAN LOOP */
@@ -677,7 +689,7 @@ function renderRawDebug(data){
   if(!elRawDebug){
     elRawDebug = document.createElement("div");
     elRawDebug.id = "rawDebugPanel";
-    elRawDebug.style.cssText = "position:absolute;left:8px;right:8px;bottom:46px;max-height:140px;overflow:auto;background:rgba(0,0,0,.9);border:1px solid #555;border-radius:8px;padding:6px 8px;padding-right:60px;font-size:10px;line-height:1.3;color:#9f9;font-family:monospace;white-space:pre-wrap;word-break:break-all;z-index:30;";
+    elRawDebug.style.cssText = "position:absolute;left:8px;right:8px;bottom:84px;max-height:140px;overflow:auto;background:rgba(0,0,0,.9);border:1px solid #555;border-radius:8px;padding:6px 8px;font-size:10px;line-height:1.3;color:#9f9;font-family:monospace;white-space:pre-wrap;word-break:break-all;z-index:30;";
     elRawDebug.addEventListener("click",()=>{
       elRawDebug.style.maxHeight = elRawDebug.style.maxHeight==="140px" ? "400px" : "140px";
     });
@@ -686,8 +698,8 @@ function renderRawDebug(data){
     // FIX: copy-to-clipboard button, since selecting text inside a small
     // scrollable overlay is fiddly on mobile.
     elRawDebugCopyBtn = document.createElement("button");
-    elRawDebugCopyBtn.textContent = "📋 Copy";
-    elRawDebugCopyBtn.style.cssText = "position:absolute;left:8px;right:8px;bottom:8px;padding:6px;font-size:11px;font-weight:700;border:1px solid #555;border-radius:6px;background:#222;color:#9f9;cursor:pointer;z-index:31;";
+    elRawDebugCopyBtn.textContent = "📋 Copy raw response";
+    elRawDebugCopyBtn.style.cssText = "position:absolute;left:8px;right:8px;bottom:50px;padding:6px;font-size:11px;font-weight:700;border:1px solid #555;border-radius:6px;background:#222;color:#9f9;cursor:pointer;z-index:31;";
     elRawDebugCopyBtn.addEventListener("click",async(e)=>{
       e.stopPropagation();
       try{
@@ -717,6 +729,7 @@ elDebugToggle.addEventListener("click",()=>{
   if(!debugMode){
     elDebugList.innerHTML="";
     if(elRawDebug) elRawDebug.remove(); elRawDebug=null;
+    if(elRawDebugCopyBtn) elRawDebugCopyBtn.remove(); elRawDebugCopyBtn=null;
   }
   else if(lastPreds.length) renderDebug(lastPreds);
 });
