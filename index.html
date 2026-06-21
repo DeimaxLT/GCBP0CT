@@ -671,18 +671,43 @@ function renderDebug(preds){
 // on screen (tap to expand/collapse), so it can be read live on a phone with
 // no PC or console access needed.
 let elRawDebug = null;
+let elRawDebugCopyBtn = null;
+let lastRawDebugText = "";
 function renderRawDebug(data){
   if(!elRawDebug){
     elRawDebug = document.createElement("div");
     elRawDebug.id = "rawDebugPanel";
-    elRawDebug.style.cssText = "position:absolute;left:8px;right:8px;bottom:46px;max-height:140px;overflow:auto;background:rgba(0,0,0,.9);border:1px solid #555;border-radius:8px;padding:6px 8px;font-size:10px;line-height:1.3;color:#9f9;font-family:monospace;white-space:pre-wrap;word-break:break-all;z-index:30;";
+    elRawDebug.style.cssText = "position:absolute;left:8px;right:8px;bottom:46px;max-height:140px;overflow:auto;background:rgba(0,0,0,.9);border:1px solid #555;border-radius:8px;padding:6px 8px;padding-right:60px;font-size:10px;line-height:1.3;color:#9f9;font-family:monospace;white-space:pre-wrap;word-break:break-all;z-index:30;";
     elRawDebug.addEventListener("click",()=>{
       elRawDebug.style.maxHeight = elRawDebug.style.maxHeight==="140px" ? "400px" : "140px";
     });
     document.querySelector(".camera-wrap").appendChild(elRawDebug);
+
+    // FIX: copy-to-clipboard button, since selecting text inside a small
+    // scrollable overlay is fiddly on mobile.
+    elRawDebugCopyBtn = document.createElement("button");
+    elRawDebugCopyBtn.textContent = "📋 Copy";
+    elRawDebugCopyBtn.style.cssText = "position:absolute;left:8px;right:8px;bottom:8px;padding:6px;font-size:11px;font-weight:700;border:1px solid #555;border-radius:6px;background:#222;color:#9f9;cursor:pointer;z-index:31;";
+    elRawDebugCopyBtn.addEventListener("click",async(e)=>{
+      e.stopPropagation();
+      try{
+        await navigator.clipboard.writeText(lastRawDebugText);
+        elRawDebugCopyBtn.textContent = "✅ Copied!";
+      }catch(_){
+        // fallback: select the panel text for manual copy if clipboard API unavailable
+        const r=document.createRange();
+        r.selectNodeContents(elRawDebug);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(r);
+        elRawDebugCopyBtn.textContent = "Selected — copy manually";
+      }
+      setTimeout(()=>{ elRawDebugCopyBtn.textContent = "📋 Copy"; }, 2000);
+    });
+    document.querySelector(".camera-wrap").appendChild(elRawDebugCopyBtn);
   }
   let text;
   try{ text = JSON.stringify(data, null, 1); }catch(_){ text = String(data); }
+  lastRawDebugText = text;  // full text, uncut, for the copy button
   elRawDebug.textContent = "RAW (tap to expand):\n" + text.slice(0, 2000);
 }
 
