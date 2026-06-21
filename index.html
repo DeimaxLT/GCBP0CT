@@ -143,7 +143,7 @@
 // "https://your-project.vercel.app/api/infer"
 const PROXY_URL             = "https://gcbp-0-ct.vercel.app/api/infer";
 const FINAL_COORDS         = "N 55\u00b0 42.566 E 21\u00b0 08.396";
-const TIMER_DURATION       = 300;
+const TIMER_DURATION       = 90;
 const MANUAL_CODE          = "VOLTAGE42";
 const CONFIDENCE_THRESHOLD = 0.40;
 const CONFIRM_HITS         = 3;
@@ -250,7 +250,6 @@ let modelReady    = false;
 let bannerIv      = null;
 let isErrorState  = false;  // true only once we're in a *sustained* failure run (>= threshold)
 let consecutiveErrors = 0;  // FIX: counts back-to-back failures so single blips don't trigger the error UI
-let lastCapturedDataUrl = null;  // DEBUG: most recent captured frame, for the long-press download feature
 
 /* ELEMENTS */
 const $= id=>document.getElementById(id);
@@ -486,15 +485,7 @@ function captureBase64(){
   const c=document.createElement("canvas");
   c.width=w; c.height=h;
   c.getContext("2d").drawImage(elVideo,0,0);
-  const dataUrl = c.toDataURL("image/jpeg",0.8);
-  lastCapturedDataUrl = dataUrl;  // DEBUG: keep the latest frame available for long-press download
-  // DEBUG: log frame dimensions and a way to view the actual captured image,
-  // so we can confirm the camera frame looks correct before it's sent out.
-  if(debugMode){
-    console.log("Captured frame:", w+"x"+h, "size(b64 chars):", dataUrl.length);
-    console.log("Paste this in a new browser tab to view the captured frame:", dataUrl);
-  }
-  return dataUrl.split(",")[1];
+  return c.toDataURL("image/jpeg",0.8).split(",")[1];
 }
 
 /* MODEL BANNER — animates while waiting, only completes on first success */
@@ -611,12 +602,6 @@ async function runScan(){
     startTimer();
     if(debugMode){
       renderDebug(preds);
-      // DEBUG: also show the raw response shape on screen, so we can see
-      // exactly what Roboflow returned even when extractPredictions finds
-      // nothing — helps catch cases where the response shape differs from
-      // what we expect (e.g. nested differently, or an error buried inside
-      // an otherwise-200 response).
-      renderRawDebug(data);
     }
 
     const target = STAGES[stage].object.toLowerCase();
@@ -679,78 +664,12 @@ function renderDebug(preds){
   });
 }
 
-// DEBUG: show the literal raw JSON response from the proxy/Roboflow directly
-// on screen (tap to expand/collapse), so it can be read live on a phone with
-// no PC or console access needed.
-let elRawDebug = null;
-let elRawDebugCopyBtn = null;
-let lastRawDebugText = "";
-function renderRawDebug(data){
-  if(!elRawDebug){
-    elRawDebug = document.createElement("div");
-    elRawDebug.id = "rawDebugPanel";
-    elRawDebug.style.cssText = "position:absolute;left:8px;right:8px;bottom:84px;max-height:140px;overflow:auto;background:rgba(0,0,0,.9);border:1px solid #555;border-radius:8px;padding:6px 8px;font-size:10px;line-height:1.3;color:#9f9;font-family:monospace;white-space:pre-wrap;word-break:break-all;z-index:30;";
-    elRawDebug.addEventListener("click",()=>{
-      elRawDebug.style.maxHeight = elRawDebug.style.maxHeight==="140px" ? "400px" : "140px";
-    });
-    document.querySelector(".camera-wrap").appendChild(elRawDebug);
-
-    // FIX: copy-to-clipboard button, since selecting text inside a small
-    // scrollable overlay is fiddly on mobile.
-    elRawDebugCopyBtn = document.createElement("button");
-    elRawDebugCopyBtn.textContent = "📋 Copy raw response";
-    elRawDebugCopyBtn.style.cssText = "position:absolute;left:8px;right:8px;bottom:50px;padding:6px;font-size:11px;font-weight:700;border:1px solid #555;border-radius:6px;background:#222;color:#9f9;cursor:pointer;z-index:31;";
-    elRawDebugCopyBtn.addEventListener("click",async(e)=>{
-      e.stopPropagation();
-      try{
-        await navigator.clipboard.writeText(lastRawDebugText);
-        elRawDebugCopyBtn.textContent = "✅ Copied!";
-      }catch(_){
-        // fallback: select the panel text for manual copy if clipboard API unavailable
-        const r=document.createRange();
-        r.selectNodeContents(elRawDebug);
-        window.getSelection().removeAllRanges();
-        window.getSelection().addRange(r);
-        elRawDebugCopyBtn.textContent = "Selected — copy manually";
-      }
-      setTimeout(()=>{ elRawDebugCopyBtn.textContent = "📋 Copy"; }, 2000);
-    });
-    document.querySelector(".camera-wrap").appendChild(elRawDebugCopyBtn);
-  }
-  let text;
-  try{ text = JSON.stringify(data, null, 1); }catch(_){ text = String(data); }
-  lastRawDebugText = text;  // full text, uncut, for the copy button
-  elRawDebug.textContent = "RAW (tap to expand):\n" + text.slice(0, 2000);
-}
-
 elDebugToggle.addEventListener("click",()=>{
   debugMode=!debugMode;
   elDebugToggle.textContent=debugMode?"🔍 ON":"🔍 OFF";
-  if(!debugMode){
-    elDebugList.innerHTML="";
-    if(elRawDebug) elRawDebug.remove(); elRawDebug=null;
-    if(elRawDebugCopyBtn) elRawDebugCopyBtn.remove(); elRawDebugCopyBtn=null;
-  }
+  if(!debugMode) elDebugList.innerHTML="";
   else if(lastPreds.length) renderDebug(lastPreds);
 });
-
-// DEBUG: long-press the debug button to download the most recent captured
-// frame as a real .jpg file — lets you grab the exact image the app sent
-// to Roboflow without needing console access (handy on mobile).
-let debugPressTimer = null;
-elDebugToggle.addEventListener("touchstart",()=>{
-  debugPressTimer=setTimeout(()=>{
-    if(lastCapturedDataUrl){
-      const a=document.createElement("a");
-      a.href=lastCapturedDataUrl;
-      a.download="captured-frame.jpg";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-  },800);
-});
-elDebugToggle.addEventListener("touchend",()=>clearTimeout(debugPressTimer));
 
 // Scan button gives hitCount a boost (one tap away from confirming)
 elScanBtn.addEventListener("click",()=>{
