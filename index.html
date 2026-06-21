@@ -597,7 +597,15 @@ async function runScan(){
 
     markModelReady();
     startTimer();
-    if(debugMode) renderDebug(preds);
+    if(debugMode){
+      renderDebug(preds);
+      // DEBUG: also show the raw response shape on screen, so we can see
+      // exactly what Roboflow returned even when extractPredictions finds
+      // nothing — helps catch cases where the response shape differs from
+      // what we expect (e.g. nested differently, or an error buried inside
+      // an otherwise-200 response).
+      renderRawDebug(data);
+    }
 
     const target = STAGES[stage].object.toLowerCase();
     const hit    = preds.some(p=>p.class?.toLowerCase()===target && p.confidence>=CONFIDENCE_THRESHOLD);
@@ -659,10 +667,32 @@ function renderDebug(preds){
   });
 }
 
+// DEBUG: show the literal raw JSON response from the proxy/Roboflow directly
+// on screen (tap to expand/collapse), so it can be read live on a phone with
+// no PC or console access needed.
+let elRawDebug = null;
+function renderRawDebug(data){
+  if(!elRawDebug){
+    elRawDebug = document.createElement("div");
+    elRawDebug.id = "rawDebugPanel";
+    elRawDebug.style.cssText = "position:absolute;left:8px;right:8px;bottom:46px;max-height:140px;overflow:auto;background:rgba(0,0,0,.9);border:1px solid #555;border-radius:8px;padding:6px 8px;font-size:10px;line-height:1.3;color:#9f9;font-family:monospace;white-space:pre-wrap;word-break:break-all;z-index:30;";
+    elRawDebug.addEventListener("click",()=>{
+      elRawDebug.style.maxHeight = elRawDebug.style.maxHeight==="140px" ? "400px" : "140px";
+    });
+    document.querySelector(".camera-wrap").appendChild(elRawDebug);
+  }
+  let text;
+  try{ text = JSON.stringify(data, null, 1); }catch(_){ text = String(data); }
+  elRawDebug.textContent = "RAW (tap to expand):\n" + text.slice(0, 2000);
+}
+
 elDebugToggle.addEventListener("click",()=>{
   debugMode=!debugMode;
   elDebugToggle.textContent=debugMode?"🔍 ON":"🔍 OFF";
-  if(!debugMode) elDebugList.innerHTML="";
+  if(!debugMode){
+    elDebugList.innerHTML="";
+    if(elRawDebug) elRawDebug.remove(); elRawDebug=null;
+  }
   else if(lastPreds.length) renderDebug(lastPreds);
 });
 
