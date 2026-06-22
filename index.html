@@ -605,7 +605,21 @@ async function runScan(){
     }
 
     const target = STAGES[stage].object.toLowerCase();
-    const hit    = preds.some(p=>p.class?.toLowerCase()===target && p.confidence>=CONFIDENCE_THRESHOLD);
+    // FIX: previously this just checked "is the target class present
+    // anywhere in frame above threshold" — so if the next stage's object
+    // (e.g. a tree) happened to be visible in the background while scanning
+    // the current target (e.g. a bench), both were "detected" simultaneously
+    // and hits could rack up toward objects the player hadn't even reached
+    // yet. Now we require the target to be the LARGEST (closest/most
+    // prominent) qualifying detection in the frame, not merely present —
+    // a real bounding box area comparison, using width*height from Roboflow.
+    const qualifying = preds.filter(p=>p.confidence>=CONFIDENCE_THRESHOLD);
+    let largest = null;
+    for(const p of qualifying){
+      const area = (p.width||0)*(p.height||0);
+      if(!largest || area > largest.area) largest = {pred:p, area};
+    }
+    const hit = !!largest && largest.pred.class?.toLowerCase()===target;
     if(hit){
       hitCount++;
       setStatus("statusSuccess","success");
