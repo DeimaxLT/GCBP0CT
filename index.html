@@ -605,21 +605,11 @@ async function runScan(){
     }
 
     const target = STAGES[stage].object.toLowerCase();
-    // FIX: previously this just checked "is the target class present
-    // anywhere in frame above threshold" — so if the next stage's object
-    // (e.g. a tree) happened to be visible in the background while scanning
-    // the current target (e.g. a bench), both were "detected" simultaneously
-    // and hits could rack up toward objects the player hadn't even reached
-    // yet. Now we require the target to be the LARGEST (closest/most
-    // prominent) qualifying detection in the frame, not merely present —
-    // a real bounding box area comparison, using width*height from Roboflow.
-    const qualifying = preds.filter(p=>p.confidence>=CONFIDENCE_THRESHOLD);
-    let largest = null;
-    for(const p of qualifying){
-      const area = (p.width||0)*(p.height||0);
-      if(!largest || area > largest.area) largest = {pred:p, area};
-    }
-    const hit = !!largest && largest.pred.class?.toLowerCase()===target;
+    // The app only "sees" the single closest qualifying object — see
+    // findClosest() above. Anything else in frame (background objects,
+    // future-stage targets, etc.) is effectively invisible to gameplay logic.
+    const closest = findClosest(preds);
+    const hit = !!closest && closest.class?.toLowerCase()===target;
     if(hit){
       hitCount++;
       setStatus("statusSuccess","success");
@@ -630,11 +620,13 @@ async function runScan(){
       }
     } else {
       if(hitCount>0) hitCount=Math.max(0,hitCount-1);
-      // FIX: only actually change the displayed status if it's different from
+      // only actually change the displayed status if it's different from
       // what's already showing — prevents re-setting "Paru\u0161ota" -> "Paru\u0161ota"
       // every cycle, which was the visible source of the flicker/spam.
-      const nextKey = preds.length?"statusWrong":"statusReady";
-      const nextCls = preds.length?"error":"ready";
+      // Uses `closest` (not raw preds) to stay consistent with the
+      // closest-object-only perception model above.
+      const nextKey = closest?"statusWrong":"statusReady";
+      const nextCls = closest?"error":"ready";
       if(elStatus.dataset.key !== nextKey){
         setStatus(nextKey, nextCls);
       }
@@ -660,22 +652,38 @@ async function runScan(){
   }
 }
 
-/* DEBUG */
+/* DETECTION: only "see" the single closest (largest-bounding-box) object */
+// FIX: the app used to reason about every detection in frame at once, which
+// caused two problems — (1) a future stage's object visible in the
+// background could accidentally count toward the current stage, and (2) the
+// debug overlay listed every detected object, often repeating the same class
+// multiple times (e.g. several "tree" boxes), which was cluttered and noisy.
+// This single helper is now the one source of truth: it picks the closest
+// qualifying detection, and everything else (hit-check, debug display) is
+// blind to anything else in the frame.
+function findClosest(preds){
+  const qualifying = preds.filter(p=>p.confidence>=CONFIDENCE_THRESHOLD);
+  let best = null;
+  for(const p of qualifying){
+    const area = (p.width||0)*(p.height||0);
+    if(!best || area > best.area) best = {pred:p, area};
+  }
+  return best ? best.pred : null;
+}
 function renderDebug(preds){
   elDebugList.innerHTML="";
   const target=STAGES[stage].object.toLowerCase();
-  if(!preds.length){
+  const closest = findClosest(preds);
+  if(!closest){
     const t=document.createElement("div");
     t.className="dtag"; t.textContent="nothing detected";
     elDebugList.appendChild(t); return;
   }
-  preds.forEach(p=>{
-    const isHit=p.class?.toLowerCase()===target;
-    const t=document.createElement("div");
-    t.className="dtag"+(isHit?" hit":"");
-    t.textContent=`${p.class} ${Math.round((p.confidence||0)*100)}%${isHit?" ✓":""}`;
-    elDebugList.appendChild(t);
-  });
+  const isHit = closest.class?.toLowerCase()===target;
+  const t=document.createElement("div");
+  t.className="dtag"+(isHit?" hit":"");
+  t.textContent=`${closest.class} ${Math.round((closest.confidence||0)*100)}%${isHit?" ✓":""} (closest)`;
+  elDebugList.appendChild(t);
 }
 
 elDebugToggle.addEventListener("click",()=>{
